@@ -4,12 +4,39 @@ A private shared shopping list for a family, built on [PocketBase](https://pocke
 
 PocketBase runs as the standalone binary. The repository holds only what PocketBase loads at runtime:
 
-| Directory        | Content                                         | In git |
-|------------------|-------------------------------------------------|--------|
-| `pb_public/`     | Static frontend (no build step)                 | yes    |
-| `pb_hooks/`      | JS hooks (`*.pb.js`)                            | yes    |
-| `pb_migrations/` | JS migrations, generated from schema changes    | yes    |
-| `pb_data/`       | Database and uploads                            | no     |
+| Directory        | Content                                           | In git |
+|------------------|---------------------------------------------------|--------|
+| `pb_public/`     | Static frontend (no build step)                   | yes    |
+| `pb_hooks/`      | JS hooks (`*.pb.js`) and the modules they load    | yes    |
+| `pb_migrations/` | JS migrations, the source of truth for the schema | yes    |
+| `pb_data/`       | Database and uploads                              | no     |
+
+## How the app works
+
+Every family member logs in with their own account and sees the same shared list. Items can be added, checked off and un-checked, and each item shows who added it and who changed it last. Checked-off items are deleted automatically 24 hours after they were checked off. Changes made by others appear live.
+
+The app also works without a connection, which is common inside shops. It opens with the last known list, and items can be added, checked off and un-checked offline. These changes are marked as not yet synchronized and are sent as soon as the connection returns. Deleting needs a connection.
+
+Logging out removes the list and any unsent changes from the device. If only the session expired, unsent changes are kept until the same person logs in again. They are discarded if someone else logs in on that device, so they are never sent under the wrong name.
+
+## Family accounts
+
+There is no self-registration. The administrator creates one account per family member in the admin UI (`/_/`, collection **users**):
+
+- **email** and **password**: what the person logs in with.
+- **name**: the display name the app shows everywhere, for example "Mama". It is required, at most 30 characters long, and must not start or end with a space. The app never shows email addresses.
+- **verified**: can stay off, because the app sends no emails.
+
+Family members can see each other's display names but not their email addresses. Deleting an account keeps the items that person added; the app then shows "Unbekannt" as their author.
+
+## Installing the app on a phone
+
+Open the app in the phone's browser, log in, and add it to the home screen. It then starts in its own window like a native app.
+
+- **iPhone (Safari):** Share button, then "Zum Home-Bildschirm".
+- **Android (Chrome):** menu, then "App installieren" or "Zum Startbildschirm hinzufügen".
+
+On iPhones this matters for more than convenience. Safari deletes the stored data of websites that haven't been used for about seven days, including the offline copy of the list and any unsent changes. Apps added to the home screen are exempt from this.
 
 ## Local development
 
@@ -34,10 +61,59 @@ nix develop -c pocketbase superuser upsert you@example.com <password> --dir=./pb
 
 Changes to files in `pb_public/` are visible after a browser reload. Changes in `pb_hooks/` restart the server automatically.
 
+## Tests
+
+```sh
+make test
+```
+
+This runs the unit and API tests with `node --test` and then the browser tests with Playwright. Both tools come from the Nix dev shell, so there is no `npm install` and no `node_modules/`. The first run downloads Node, Playwright and its browsers into the Nix store, which takes a while.
+
+The tests start their own PocketBase on a free port with a temporary data directory and delete it afterwards. You don't need `make dev` running, and your local `pb_data/` is never touched.
+
+| Directory        | Content                                                     |
+|------------------|-------------------------------------------------------------|
+| `tests/unit/`    | Client logic from `pb_public/js/`, tested without a browser |
+| `tests/api/`     | API rules, hooks and cleanup, tested with plain HTTP        |
+| `tests/e2e/`     | Browser scenarios with Playwright                           |
+| `tests/support/` | Helpers that start the test server and create test users    |
+
+To run only one kind of test, for example while working on the API:
+
+```sh
+nix develop -c node --test "tests/api/**/*.test.mjs"
+nix develop -c playwright test tests/e2e/login.spec.mjs
+```
+
+Playwright cannot be imported directly in test files, because the Nix package makes it available only to `require`. Browser tests import `test` and `expect` from `tests/support/e2e.mjs` instead, which also provides logged-in pages for Anna and Ben.
+
+To take a page offline, use `goOffline` and `goOnline` from the same file. They cut a small proxy between that browser and the server. Chromium's own offline switch is not enough on its own: right after a reload it occasionally lets a request through while reporting it as failed, which made offline tests flaky.
+
+## Manual checks on real phones
+
+The automated tests run in desktop Chromium. They cannot cover Safari on iOS, installing to a real home screen, the phone keyboard, or a phone that loses its signal. Go through this list after changes to the frontend, with two phones (ideally one iPhone and one Android phone) logged in as different family members.
+
+Offline support needs HTTPS, because browsers only run Service Workers on secure origins. A phone that opens `http://<your-laptop-ip>:8090` gets the app without offline support and cannot install it properly. Run the offline checks against the deployed instance. For the other checks, a local server reachable from the phone is enough:
+
+```sh
+nix develop -c pocketbase serve --http=0.0.0.0:8090 --dir=./pb_data --publicDir=./pb_public --hooksDir=./pb_hooks --migrationsDir=./pb_migrations
+```
+
+Checklist:
+
+1. **Install:** add the app to the home screen on both phones. It starts in its own window with the name "Einkauf" and the green basket icon.
+2. **Login:** a wrong password shows "E-Mail oder Passwort ist falsch."; after logging in, the header shows your display name and no email address appears anywhere.
+3. **Live updates:** an item added on one phone appears on the other within a few seconds, with "von <name>". Checking it off shows "zuletzt <name>" on the other phone.
+4. **Phone layout:** the keyboard does not cover the input field; every button and row is easy to hit with a thumb; nothing scrolls sideways. Check light and dark mode.
+5. **Airplane mode:** switch on airplane mode, close the app completely and open it from the home screen. The list appears with the offline hint. Add an item and check one off; both are marked "nicht synchronisiert" and the delete buttons are disabled. Close and reopen the app; the changes are still there.
+6. **Back online:** switch airplane mode off with the app open. Within a few seconds the marks disappear, and the other phone shows both changes.
+7. **In a shop:** open the app where the signal is weak. The list appears after at most about three seconds.
+8. **Logout:** log out, switch on airplane mode and open the app. Only the login screen appears, with no list.
+
 ## Schema changes
 
-1. Change collections in the **local** admin UI.
-2. PocketBase writes a migration file to `pb_migrations/`.
+1. Change collections in the **local** admin UI, or write a migration in `pb_migrations/` by hand. The existing migrations are handwritten, so that rules and settings can be reviewed in one place.
+2. When you use the admin UI, PocketBase writes the migration file to `pb_migrations/`.
 3. Commit the migration together with the code that depends on it.
 4. Production applies pending migrations on startup.
 
@@ -55,11 +131,25 @@ cp .env.example .env    # set APP_HOST and secrets, chmod 600 .env
 docker compose up -d
 ```
 
+PocketBase applies the migrations on startup. Then open `https://<APP_HOST>/_/`, log in as the superuser from `.env`, and create the family accounts as described in [Family accounts](#family-accounts).
+
+After the first deployment, check that the login rate limit tells devices apart. On one phone, using mobile data rather than your home Wi-Fi, log in with a wrong password eleven times within a minute until the app reports too many attempts. A second device on another network must still be able to log in. If it can't, the `X-Forwarded-For` header from Traefik doesn't reach PocketBase as expected, and every request seems to come from the same address. The trusted proxy setting is in `pb_migrations/1792264700_enable_rate_limits.js`; correct it with a new migration.
+
 Update:
 
 ```sh
 git pull && docker compose up -d
 ```
+
+Installed apps load the new frontend the next time they start with a connection; nobody has to clear caches.
+
+To roll back, check out the previous commit and run `docker compose up -d` again. If the rollback crosses a migration, revert that migration first, while the newer code is still checked out:
+
+```sh
+docker compose exec einkauf pocketbase migrate down 1 --dir=/pb_data --migrationsDir=/pb_migrations
+```
+
+Reverting the migration that creates the `items` collection deletes all list items.
 
 Back up `pb_data/` in the deployment directory. It contains all application data.
 

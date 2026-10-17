@@ -14,6 +14,11 @@ dev: ## Start PocketBase locally in dev mode on http://localhost:8090
 clean: ## Delete local runtime data (pb_data/) and Nix build links; keeps migrations
 	rm -rf ./pb_data ./result
 
+.PHONY: test
+test: ## Run all automated tests against a temporary PocketBase instance
+	nix develop -c node --test "tests/unit/**/*.test.mjs" "tests/api/**/*.test.mjs"
+	nix develop -c playwright test
+
 .PHONY: check-version
 check-version: ## Fail if flake.nix and compose.yaml pin different PocketBase versions
 	@flake=$$(sed -nE 's/^ *version = "([^"]+)";.*/\1/p' flake.nix); \

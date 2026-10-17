@@ -29,11 +29,14 @@ PocketBase, no build step.
 | `flake.nix`       | Dev shell with pinned PocketBase release             |
 | `compose.yaml`    | Production service (Docker Compose behind Traefik)   |
 | `openspec/specs/` | Capability specs; changes go through OpenSpec        |
+| `tests/`          | `unit/`, `api/` (`node --test`), `e2e/` (Playwright) |
 
 Commands (Nix with flakes required, no Docker needed locally):
 
 - `make dev` — run PocketBase on `http://localhost:8090` (admin UI at `/_/`)
 - `make clean` — delete `pb_data/`; keeps migrations
+- `make test` — unit + API tests (`node --test`), then e2e (Playwright); each
+  run uses a temp PocketBase on a free port, never `pb_data/`
 - `make check-version` — fail if `flake.nix` and `compose.yaml` pin different
   PocketBase versions
 - `nix develop -c pocketbase <cmd> --dir=./pb_data` — any other PocketBase CLI
@@ -57,8 +60,24 @@ Project rules:
   every new variable in `.env.example` and reference it in `compose.yaml` as
   `${VAR:?message}`. `.env*` files may be unreadable to agents — ask the user
   instead of working around it.
-- **Tests:** no test harness exists yet; verify via `make dev` and HTTP
-  requests against the local server.
+- **Tests:** `make test`. Harness in `tests/support/` (`server.mjs`: temp
+  server, `createUser`, `impersonate`, `api`). No npm: Node and Playwright
+  come from the dev shell; import Playwright only via
+  `tests/support/playwright.mjs` (plain ESM import of `@playwright/test`
+  fails). API tests: one server per file, tokens via impersonation (login
+  is rate limited). E2E: one shared server per run, `workers: 1`; import
+  `test`/`expect` from `tests/support/e2e.mjs` (fixtures `annaPage`,
+  `benPage` via cuttable proxies; offline only via `goOffline`/`goOnline`,
+  `setOffline` alone leaks requests). Password logins in e2e share one
+  10/min bucket; use `openAs` (impersonation) unless testing login.
+- **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
+  DOM-free modules (`ids`, `storage`, `outbox`, `view`, `sync`) with unit
+  tests. All writes go through the outbox. New files in `pb_public/` must be
+  added to `SHELL` in `sw.js` (a test enforces it). CSP is a meta tag in
+  `index.html`: no inline scripts/styles, item text only via `textContent`.
+- **Server logic:** item hooks in `pb_hooks/items.pb.js`, cleanup cron and
+  route in `pb_hooks/cleanup.pb.js`; shared code in `pb_hooks/items.js`
+  loaded with `require()` inside each handler.
 
 ## Development Guidelines
 

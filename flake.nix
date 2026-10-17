@@ -43,7 +43,15 @@
 
       devShells = forAllSystems (system: pkgs: {
         default = pkgs.mkShellNoCC {
-          packages = [ self.packages.${system}.pocketbase pkgs.gnumake ];
+          packages = [
+            self.packages.${system}.pocketbase
+            pkgs.gnumake
+            # Test tooling: `node --test` for API and client logic, Playwright for browser tests.
+            pkgs.nodejs
+            pkgs.playwright-test
+          ];
+          # Use the browsers built for the same nixpkgs Playwright release instead of downloading them.
+          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
         };
       });
     };

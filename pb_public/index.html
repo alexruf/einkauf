@@ -2,13 +2,80 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Einkauf</title>
+  <meta name="theme-color" content="#2f7d4f">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/js/app.js"></script>
 </head>
 <body>
-  <main>
+  <header class="bar">
     <h1>Einkauf</h1>
-    <p>Die Einkaufsliste ist bald verfügbar.</p>
+    <div class="account" id="account" hidden>
+      <span class="user-name" id="user-name"></span>
+      <button type="button" class="link" id="logout">Abmelden</button>
+    </div>
+  </header>
+
+  <p class="status" id="status" role="status" hidden></p>
+
+  <main>
+    <section class="login" id="login-screen" hidden>
+      <form id="login-form" novalidate>
+        <h2>Anmelden</h2>
+        <p class="hint" id="login-hint" hidden></p>
+        <label>
+          E-Mail
+          <input type="email" name="email" autocomplete="username" required>
+        </label>
+        <label>
+          Passwort
+          <input type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <p class="error" id="login-error" role="alert" hidden></p>
+        <button type="submit" class="primary">Anmelden</button>
+      </form>
+    </section>
+
+    <section class="list" id="list-screen" hidden>
+      <form class="add" id="add-form">
+        <input type="text" id="new-item" name="text" maxlength="200" autocomplete="off" enterkeyhint="done"
+          placeholder="Was wird gebraucht?" aria-label="Neuer Eintrag">
+        <button type="submit" class="primary">Hinzufügen</button>
+      </form>
+      <ul class="items" id="items"></ul>
+      <p class="empty" id="empty" hidden>Die Liste ist leer.</p>
+    </section>
   </main>
+
+  <dialog class="confirm" id="confirm-delete">
+    <form method="dialog">
+      <p>„<span id="confirm-text"></span>“ ist noch nicht abgehakt. Wirklich löschen?</p>
+      <div class="actions">
+        <button type="submit" value="cancel">Abbrechen</button>
+        <button type="submit" value="delete" class="danger">Löschen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="item-template">
+    <li class="item">
+      <label class="toggle">
+        <input type="checkbox">
+        <span class="body">
+          <span class="text"></span>
+          <span class="meta"></span>
+          <span class="pending">nicht synchronisiert</span>
+        </span>
+      </label>
+      <button type="button" class="delete" aria-label="Löschen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </li>
+  </template>
 </body>
 </html>
