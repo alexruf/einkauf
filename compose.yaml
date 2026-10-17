@@ -1,0 +1,42 @@
+services:
+  einkauf:
+    # Must match `version` in flake.nix (checked by `make check-version`).
+    image: ghcr.io/muchobien/pocketbase:0.40.5
+    container_name: einkauf
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+      PB_HOST: "0.0.0.0"
+      PB_PORT: "8090"
+      PB_ADMIN_EMAIL: "${PB_ADMIN_EMAIL:?set PB_ADMIN_EMAIL in .env}"
+      PB_ADMIN_PASSWORD: "${PB_ADMIN_PASSWORD:?set PB_ADMIN_PASSWORD in .env}"
+      PB_ENCRYPTION_KEY: "${PB_ENCRYPTION_KEY:?set PB_ENCRYPTION_KEY in .env}"
+      TZ: "Europe/Berlin"
+    volumes:
+      - "./pb_data:/pb_data"
+      - "./pb_public:/pb_public:ro"
+      - "./pb_hooks:/pb_hooks:ro"
+      - "./pb_migrations:/pb_migrations:ro"
+    # Arguments starting with "-" are appended to the image's default `serve` command.
+    # Schema changes in production only come from committed migrations.
+    command:
+      - "--encryptionEnv=PB_ENCRYPTION_KEY"
+      - "--automigrate=false"
+      - "--migrationsDir=/pb_migrations"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.einkauf.rule=Host(`${APP_HOST:?set APP_HOST in .env}`)"
+      - "traefik.http.routers.einkauf.entrypoints=websecure"
+      - "traefik.http.routers.einkauf.tls.certresolver=letsencrypt"
+      - "traefik.http.services.einkauf.loadbalancer.server.port=8090"
+
+networks:
+  web:
+    external: true

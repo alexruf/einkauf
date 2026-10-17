@@ -1,0 +1,9 @@
+# PocketBase runtime data
+pb_data/
+
+# Secrets
+.env
+
+# Nix
+result
+.direnv/
