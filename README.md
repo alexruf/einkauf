@@ -33,6 +33,8 @@ Family members can see each other's display names but not their email addresses.
 
 Open the app in the phone's browser, log in, and add it to the home screen. It then starts in its own window like a native app.
 
+The login screen explains the same steps under "App installieren", so sending a new family member the link is enough. The hint disappears once the app runs from the home screen.
+
 - **iPhone (Safari):** Share button, then "Zum Home-Bildschirm".
 - **Android (Chrome):** menu, then "App installieren" or "Zum Startbildschirm hinzufügen".
 
@@ -101,7 +103,7 @@ nix develop -c pocketbase serve --http=0.0.0.0:8090 --dir=./pb_data --publicDir=
 
 Checklist:
 
-1. **Install:** add the app to the home screen on both phones. It starts in its own window with the name "Einkauf" and the green basket icon.
+1. **Install:** in the browser, the login screen shows the collapsed hint "App installieren", and its steps match what the phone shows. Add the app to the home screen on both phones. It starts in its own window with the name "Einkauf" and the green basket icon, and its login screen no longer shows the install hint.
 2. **Login:** a wrong password shows "E-Mail oder Passwort ist falsch."; after logging in, the header shows your display name and no email address appears anywhere.
 3. **Live updates:** an item added on one phone appears on the other within a few seconds, with "von <name>". Checking it off shows "zuletzt <name>" on the other phone.
 4. **Phone layout:** the keyboard does not cover the input field; every button and row is easy to hit with a thumb; nothing scrolls sideways. Check light and dark mode.

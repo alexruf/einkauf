@@ -47,3 +47,29 @@ test('given a wrong password or an unknown email, when logging in, then the same
   await expect(error).toHaveText('E-Mail oder Passwort ist falsch.');
   await expect(page.locator('#list-screen')).toBeHidden();
 });
+
+test('given no session, when opening the app, then a collapsed install hint is shown and logging in works without opening it', async ({ page }) => {
+  await page.goto('/');
+  const hint = page.locator('details.install-hint');
+  await expect(hint.locator('summary')).toHaveText('App installieren');
+  await expect(hint).not.toHaveAttribute('open');
+  await expect(hint.getByText('iPhone / iPad (Safari)')).toBeHidden();
+
+  await logIn(page, anna.email, anna.password);
+  await expect(page.locator('#user-name')).toHaveText('Anna');
+});
+
+test('given the install hint, when expanding and collapsing it, then the steps for iPhone and Android appear and disappear', async ({ page }) => {
+  await page.goto('/');
+  const hint = page.locator('details.install-hint');
+  const summary = hint.locator('summary');
+
+  await summary.click();
+  await expect(hint.getByText('iPhone / iPad (Safari)')).toBeVisible();
+  await expect(hint.getByText('Zum Home-Bildschirm')).toBeVisible();
+  await expect(hint.getByText('Android (Chrome)')).toBeVisible();
+  await expect(hint.locator('ol').nth(1)).toContainText('App installieren');
+
+  await summary.click();
+  await expect(hint.getByText('iPhone / iPad (Safari)')).toBeHidden();
+});
