@@ -158,7 +158,7 @@ A meta tag keeps the policy next to the page it protects and needs no hook. Sett
 
 ```
 make test
-  nix develop -c node --test tests/unit tests/api
+  nix develop -c node --test "tests/unit/**/*.test.mjs" "tests/api/**/*.test.mjs"
   nix develop -c playwright test           (config: playwright.config.mjs)
 
 tests/

@@ -23,7 +23,7 @@ PocketBase, no build step.
 | Path              | Content                                              |
 |-------------------|------------------------------------------------------|
 | `pb_public/`      | Static frontend; served at `/`                       |
-| `pb_hooks/`       | JS hooks (`*.pb.js`)                                 |
+| `pb_hooks/`       | JS hooks (`*.pb.js`) + shared modules (`require()`)  |
 | `pb_migrations/`  | JS migrations; source of truth for the schema        |
 | `pb_data/`        | Local runtime data; gitignored, disposable           |
 | `flake.nix`       | Dev shell with pinned PocketBase release             |

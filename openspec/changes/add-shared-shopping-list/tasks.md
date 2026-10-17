@@ -52,9 +52,10 @@
 
 - [x] 8.1 Run `make test` and `make check-version` from a clean checkout; verify both exit 0
 - [x] 8.2 Update README.md: creating family accounts with a display name in the admin UI, installing the app to the home screen (iOS data eviction), and the deployment steps; verify the README and AGENTS.md match the implemented behavior
-- [ ] 8.3 Write a short manual checklist in README.md for what automated tests cannot cover (real phone, iOS Safari, airplane mode in a shop) and run it once locally on a phone in the same network; report the results to the user
+- [x] 8.3 Write a short manual checklist in README.md for what automated tests cannot cover (real phone, iOS Safari, airplane mode in a shop) and run it once locally on a phone in the same network; report the results to the user
+  - Run on 2026-10-18 against the deployed instance instead of the local network, because Service Workers need HTTPS and offline mode cannot be tested over plain HTTP. All eight checklist items passed without errors.
 
 ## Workflow follow-up
 
-- After deployment, verify with two devices that rate limiting distinguishes clients behind Traefik (design: Risks).
+- [x] After deployment, verify with two devices that rate limiting distinguishes clients behind Traefik (design: Risks). Verified on 2026-10-18: after ten failed logins through a VPN, the next attempt was asked to wait a minute; without the VPN, the login worked immediately.
 - Archive the change after review.
