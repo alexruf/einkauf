@@ -204,7 +204,7 @@ The migrations are written as JS files instead of being clicked together in the 
 
 ## Migration Plan
 
-1. Deploy as usual (`git pull && docker compose up -d`). The migrations run on startup.
+1. Pull and restart as described in the README. The migrations run on startup. The image's automatic superuser setup is no longer used: it runs without the encryption key and fails once the rate-limit migration has saved the settings encrypted, which stopped the container in a restart loop on the first deployment of this change.
 2. Create one account per family member in the admin UI (`/_/`), including the display name.
 3. Rollback: deploy the previous commit. The new migrations have down functions that remove the `items` collection and restore the default `users` rules. Rolling back deletes all list items, which is acceptable at this stage.
 

@@ -9,8 +9,10 @@ services:
     environment:
       PB_HOST: "0.0.0.0"
       PB_PORT: "8090"
-      PB_ADMIN_EMAIL: "${PB_ADMIN_EMAIL:?set PB_ADMIN_EMAIL in .env}"
-      PB_ADMIN_PASSWORD: "${PB_ADMIN_PASSWORD:?set PB_ADMIN_PASSWORD in .env}"
+      # No PB_ADMIN_EMAIL/PB_ADMIN_PASSWORD: with them, the image runs
+      # "superuser upsert" on every start without the encryption key, which
+      # fails once the settings are encrypted and stops the container. The
+      # superuser is created once by hand instead (see README).
       PB_ENCRYPTION_KEY: "${PB_ENCRYPTION_KEY:?set PB_ENCRYPTION_KEY in .env}"
       TZ: "Europe/Berlin"
     volumes:
@@ -20,10 +22,13 @@ services:
       - "./pb_migrations:/pb_migrations:ro"
     # Arguments starting with "-" are appended to the image's default `serve` command.
     # Schema changes in production only come from committed migrations.
+    # Hooks are not watched: a restart in the middle of `git pull` would run
+    # half-updated files. Updates restart the container explicitly.
     command:
       - "--encryptionEnv=PB_ENCRYPTION_KEY"
       - "--automigrate=false"
       - "--migrationsDir=/pb_migrations"
+      - "--hooksWatch=false"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8090/api/health"]
       interval: 30s

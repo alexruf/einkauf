@@ -127,23 +127,30 @@ First deployment:
 
 ```sh
 git clone <repo-url> einkauf && cd einkauf
-cp .env.example .env    # set APP_HOST and secrets, chmod 600 .env
+cp .env.example .env    # set APP_HOST and PB_ENCRYPTION_KEY, chmod 600 .env
+docker compose run --rm einkauf superuser upsert <email> <password> --dir=/pb_data --encryptionEnv=PB_ENCRYPTION_KEY
 docker compose up -d
 ```
 
-PocketBase applies the migrations on startup. Then open `https://<APP_HOST>/_/`, log in as the superuser from `.env`, and create the family accounts as described in [Family accounts](#family-accounts).
+The second command creates the superuser for the admin UI. It must pass the encryption key, because PocketBase stores its settings encrypted. Start the command line with a space so the password does not end up in the shell history (in Bash, this works when `HISTCONTROL` contains `ignorespace`, which is the default on Debian and Ubuntu). The same command changes the password of an existing superuser.
+
+PocketBase applies the migrations on startup. Then open `https://<APP_HOST>/_/`, log in as the superuser, and create the family accounts as described in [Family accounts](#family-accounts).
 
 After the first deployment, check that the login rate limit tells devices apart. On one phone, using mobile data rather than your home Wi-Fi, log in with a wrong password eleven times within a minute until the app reports too many attempts. A second device on another network must still be able to log in. If it can't, the `X-Forwarded-For` header from Traefik doesn't reach PocketBase as expected, and every request seems to come from the same address. The trusted proxy setting is in `pb_migrations/1792264700_enable_rate_limits.js`; correct it with a new migration.
 
 Update:
 
 ```sh
-git pull && docker compose up -d
+git pull --ff-only
+docker compose up -d
+docker compose restart einkauf
 ```
+
+`docker compose up -d` only recreates the container when `compose.yaml` changed. The restart is needed in every other case, because PocketBase loads hooks and applies migrations only when it starts; it does not watch for file changes in production. Check `docker compose logs einkauf` afterwards for errors.
 
 Installed apps load the new frontend the next time they start with a connection; nobody has to clear caches.
 
-To roll back, check out the previous commit and run `docker compose up -d` again. If the rollback crosses a migration, revert that migration first, while the newer code is still checked out:
+To roll back, check out the previous commit and run the two `docker compose` commands from above again. If the rollback crosses a migration, revert that migration first, while the newer code is still checked out:
 
 ```sh
 docker compose exec einkauf pocketbase migrate down 1 --dir=/pb_data --migrationsDir=/pb_migrations
