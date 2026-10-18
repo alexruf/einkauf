@@ -3,6 +3,20 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.18.2 (2026-10-18)
+
+### Features
+
+- **shopping-list:** Allow editing an item's text
+- **shopping-list:** Let family members claim open items
+
+### Bug Fixes
+
+- **offline-sync:** Retry the realtime connection after a failed start
+
+### Documentation
+
+- **openspec:** Propose clearing all checked-off items at once
 ## 2026.10.18.1 (2026-10-18)
 
 ### Features
