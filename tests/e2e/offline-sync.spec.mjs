@@ -78,3 +78,18 @@ test('given Ben deletes an item Anna checked off offline, when Anna reconnects, 
   // Dropping a change to a deleted item is expected and needs no notice.
   await expect(annaPage.getByRole('status')).toBeHidden();
 });
+
+test('given the realtime connection fails right after reconnecting, when the server answers again, then the app becomes connected', async ({ annaPage }) => {
+  await annaGoesOffline(annaPage, ['Milch']);
+  // Opening the app offline leaves it without a realtime connection.
+  await annaPage.reload();
+  await expect(annaPage.getByRole('status')).toContainText('Offline');
+
+  // The first realtime attempt after reconnecting is refused, as under rate
+  // limiting; later ones succeed.
+  await annaPage.route('**/api/realtime', (route) => route.fulfill({ status: 429, json: { message: 'Too Many Requests' } }), { times: 1 });
+  await goOnline(annaPage);
+
+  await expect(annaPage.locator('#connection-indicator')).toContainText('Verbunden', { timeout: 15000 });
+  await expect(annaPage.getByRole('status')).toBeHidden();
+});

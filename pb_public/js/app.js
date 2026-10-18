@@ -282,8 +282,17 @@ async function deleteItem(id) {
 // connection succeeded once, so an app started offline must start it again.
 let realtimeGaveUp = false;
 
+// A failed start is retried after this delay while the browser reports a
+// network. Otherwise the next successful sync would be the only trigger, and
+// if the failure came right after reconnecting, for example because the server
+// was briefly rate limiting, the app would stay "Offline" until the user
+// changed something.
+const REALTIME_RETRY_MS = 5000;
+let realtimeRetryTimer;
+
 async function connectRealtime() {
   realtimeGaveUp = false;
+  clearTimeout(realtimeRetryTimer);
   // Start from a clean state, so a second start does not add listeners twice.
   await pb.realtime.unsubscribe().catch(() => {});
   pb.realtime.onDisconnect = (activeSubscriptions) => {
@@ -299,7 +308,10 @@ async function connectRealtime() {
     await pb.collection('items').subscribe('*', (event) => sync.applyEvent(event));
   } catch (error) {
     realtimeGaveUp = true;
-    console.warn('Realtime connection failed; retrying after the next successful sync', error);
+    console.warn('Realtime connection failed; retrying later', error);
+    if (navigator.onLine) {
+      realtimeRetryTimer = setTimeout(() => currentUser() && realtimeGaveUp && connectRealtime(), REALTIME_RETRY_MS);
+    }
   }
 }
 
