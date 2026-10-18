@@ -7,6 +7,7 @@ import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
 import { createStore } from './storage.js';
 import { createSync } from './sync.js';
+import { createUpdater, parseVersion } from './update.js';
 import { VERSION } from './version.js';
 import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from './view.js';
 
@@ -29,6 +30,7 @@ const sync = createSync({
   onAuthError: () => endSession('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'),
   onRejected: () => showNotice('Eine Änderung wurde vom Server abgelehnt und verworfen.'),
 });
+const updater = createUpdater({ running: VERSION, backend: sessionStorage });
 
 // 'connecting' until the realtime connection is established or a request
 // fails. Deleting is only offered while 'online'.
@@ -255,7 +257,12 @@ function requestDelete(row) {
   dialog.showModal();
 }
 
+// Deleting does not go through the outbox, so a reload while a delete
+// request is running could abort it.
+let runningDeletes = 0;
+
 async function deleteItem(id) {
+  runningDeletes += 1;
   try {
     await pb.collection('items').delete(id);
   } catch (error) {
@@ -274,6 +281,9 @@ async function deleteItem(id) {
       showNotice('Der Eintrag konnte nicht gelöscht werden.');
       return;
     }
+  } finally {
+    runningDeletes -= 1;
+    reloadIfIdle();
   }
   sync.applyEvent({ action: 'delete', record: { id } });
 }
@@ -306,6 +316,7 @@ async function connectRealtime() {
     await pb.realtime.subscribe('PB_CONNECT', () => {
       setConnection('online');
       flush();
+      checkVersion();
     });
     await pb.collection('items').subscribe('*', (event) => sync.applyEvent(event));
   } catch (error) {
@@ -315,6 +326,33 @@ async function connectRealtime() {
       realtimeRetryTimer = setTimeout(() => currentUser() && realtimeGaveUp && connectRealtime(), REALTIME_RETRY_MS);
     }
   }
+}
+
+// Updates
+
+// A deployment restarts the server, so every open app reconnects afterwards
+// and checks here which version is deployed now. "no-store" makes the Service
+// Worker leave the request to the network. A failed check changes nothing;
+// the next reconnect checks again.
+async function checkVersion() {
+  try {
+    const response = await fetch('/js/version.js', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Status ${response.status}`);
+    const deployed = parseVersion(await response.text());
+    if (!deployed) throw new Error('No version in version.js');
+    updater.found(deployed);
+    reloadIfIdle();
+  } catch (error) {
+    console.warn('Checking the deployed version failed', error);
+  }
+}
+
+// Unsent changes survive a reload in the outbox; only an entry in progress
+// would be lost, so the reload waits for it.
+function reloadIfIdle() {
+  const busy =
+    $('new-item').value.trim() !== '' || document.querySelector('dialog[open]') !== null || runningDeletes > 0;
+  if (updater.takeReload(busy)) location.reload();
 }
 
 // Refreshes the token and the own record, so an active user stays logged
@@ -413,10 +451,16 @@ $('add-form').addEventListener('submit', (event) => {
   const text = input.value.trim();
   input.value = '';
   if (text) addItem(text);
+  reloadIfIdle();
 });
 
 $('logout').addEventListener('click', requestLogout);
 $('edit-cancel').addEventListener('click', () => $('edit-item').close());
+// These listeners run before the dialog's own close handler, which may start
+// a delete. Waiting a tick lets that delete count as running.
+for (const dialog of document.querySelectorAll('dialog')) {
+  dialog.addEventListener('close', () => setTimeout(reloadIfIdle, 0));
+}
 
 window.addEventListener('online', () => currentUser() && flush());
 // The browser knowing it is offline is reliable; it claiming to be online

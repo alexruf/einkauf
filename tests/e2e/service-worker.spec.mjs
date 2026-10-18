@@ -44,6 +44,24 @@ test('given the list was opened online, when the app is opened offline, then it 
   await goOnline(annaPage);
 });
 
+test('given a cached file, when it is requested with cache mode "no-store" offline, then the request fails instead of being answered from the cache', async ({
+  annaPage,
+}) => {
+  await waitForServiceWorker(annaPage);
+  const fetchVersion = () =>
+    annaPage.evaluate(() =>
+      fetch('/js/version.js', { cache: 'no-store' }).then(
+        (response) => response.ok,
+        () => false,
+      ),
+    );
+  expect(await fetchVersion()).toBe(true);
+
+  await goOffline(annaPage);
+  expect(await fetchVersion()).toBe(false);
+  await goOnline(annaPage);
+});
+
 test('given every file in pb_public, then the Service Worker precaches it', async () => {
   const sw = await readFile(join(PUBLIC_DIR, 'sw.js'), 'utf8');
   const files = (await readdir(PUBLIC_DIR, { recursive: true, withFileTypes: true }))

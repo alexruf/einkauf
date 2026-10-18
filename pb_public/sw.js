@@ -5,6 +5,11 @@
 //
 // List data never passes through here: /api/ is not handled, and the page
 // keeps the list in localStorage.
+//
+// Requests with cache mode "no-store" are not handled either. The app uses
+// that mode to check which version is deployed: the answer must come from
+// the server, and storing it would put a new version.js next to the old
+// code, so the next offline start would run mixed versions.
 
 const CACHE = 'einkauf-shell';
 const NETWORK_TIMEOUT_MS = 3000;
@@ -19,6 +24,7 @@ const SHELL = [
   '/js/outbox.js',
   '/js/storage.js',
   '/js/sync.js',
+  '/js/update.js',
   '/js/version.js',
   '/js/view.js',
   '/vendor/pocketbase.es.mjs',
@@ -56,6 +62,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (
     request.method !== 'GET' ||
+    request.cache === 'no-store' ||
     url.origin !== self.location.origin ||
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/_/')

@@ -138,6 +138,7 @@ Checklist:
 6. **Back online:** switch airplane mode off with the app open. Within a few seconds the marks disappear, and the other phone shows both changes.
 7. **In a shop:** open the app where the signal is weak. The list appears after at most about three seconds.
 8. **Logout:** log out, switch on airplane mode and open the app. Only the login screen appears, with no list.
+9. **New release:** put the logged-in app in the background and deploy a release. When you bring the app back, it reloads by itself within a few seconds and the status bar shows the new version.
 
 ## Schema changes
 
@@ -198,6 +199,8 @@ docker compose restart einkauf
 The clone then has no branch checked out ("detached HEAD"). That is intended, because production runs a release rather than a branch; `git pull` does not apply here.
 
 `docker compose up -d` only recreates the container when `compose.yaml` changed. The restart is needed in every other case, because PocketBase loads hooks and applies migrations only when it starts; it does not watch for file changes in production. Check `docker compose logs einkauf` afterwards for errors.
+
+Apps that are open during the restart lose their live connection and reconnect afterwards. When they reconnect, they notice the new version and reload themselves. An app that is in the background does the same when it is brought back. If someone is typing a new item or has a dialog open, the app waits until the item has been added or the dialog has been closed, so nothing typed is lost.
 
 Installed apps load the new frontend the next time they start with a connection; nobody has to clear caches.
 

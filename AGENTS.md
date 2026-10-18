@@ -85,7 +85,7 @@ Project rules:
   e2e server raises only the general `/api/` limit (`global-setup.mjs`).
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
   DOM-free modules (`ids`, `storage`, `app-name`, `outbox`, `view`, `sync`,
-  `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
+  `update`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
   written only by `make release`; never edit it by hand. All writes go
   through the outbox. New files in `pb_public/` must be added to `SHELL` in
   `sw.js` (a test enforces it). CSP is a meta tag in
