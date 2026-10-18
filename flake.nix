@@ -46,6 +46,8 @@
           packages = [
             self.packages.${system}.pocketbase
             pkgs.gnumake
+            # Generates CHANGELOG.md from the commit history in `make release`.
+            pkgs.git-cliff
             # Test tooling: `node --test` for API and client logic, Playwright for browser tests.
             pkgs.nodejs
             pkgs.playwright-test

@@ -19,6 +19,10 @@ test: ## Run all automated tests against a temporary PocketBase instance
 	nix develop -c node --test "tests/unit/**/*.test.mjs" "tests/api/**/*.test.mjs"
 	nix develop -c playwright test
 
+.PHONY: release
+release: ## Create the next release (commit + tag) locally; prints the push command
+	nix develop -c ./scripts/release.sh
+
 .PHONY: check-version
 check-version: ## Fail if flake.nix and compose.yaml pin different PocketBase versions
 	@flake=$$(sed -nE 's/^ *version = "([^"]+)";.*/\1/p' flake.nix); \

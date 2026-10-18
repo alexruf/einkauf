@@ -1,0 +1,48 @@
+# Configuration for git-cliff, which `make release` uses to generate
+# CHANGELOG.md from the Conventional Commits history.
+# Reference: https://git-cliff.org/docs/configuration
+
+[changelog]
+header = """
+# Changelog
+
+Notable changes per release, for the people who run and develop this app.
+Versions are release dates with a counter for releases on the same day.\n
+"""
+# One section per release. The "<!-- n -->" prefixes of the group names only
+# fix the order of the groups and are stripped here.
+body = """
+{% if version %}\
+    ## {{ version | trim_start_matches(pat="v") }} ({{ timestamp | date(format="%Y-%m-%d") }})
+{% else %}\
+    ## Unreleased
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | striptags | trim }}
+    {% for commit in commits %}
+        - {% if commit.scope %}**{{ commit.scope }}:** {% endif %}\
+            {% if commit.breaking %}[**breaking**] {% endif %}\
+            {{ commit.message | upper_first }}\
+    {% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+# Only these kinds of changes matter to operators and developers. Everything
+# else, including the release commits themselves, stays out of the changelog.
+commit_parsers = [
+    { message = "^feat", group = "<!-- 0 -->Features" },
+    { message = "^fix", group = "<!-- 1 -->Bug Fixes" },
+    { message = "^perf", group = "<!-- 2 -->Performance" },
+    { message = "^refactor", group = "<!-- 3 -->Refactoring" },
+    { message = "^docs?", group = "<!-- 4 -->Documentation" },
+    { message = "^(chore|test|style|ci|build)", skip = true },
+]
+filter_commits = true
+# Only release tags start a section.
+tag_pattern = "^v[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]+$"
+sort_commits = "oldest"

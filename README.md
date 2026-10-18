@@ -54,6 +54,7 @@ Prerequisites: [Nix](https://nixos.org/) with flakes enabled.
 make dev            # start PocketBase on http://localhost:8090
 make clean          # delete local data (pb_data/) to start fresh
 make help           # list all targets
+make release        # create the next release locally (see Releases)
 ```
 
 `make dev` runs the PocketBase version pinned in `flake.nix`, the same version that production uses.
@@ -137,6 +138,7 @@ First deployment:
 
 ```sh
 git clone <repo-url> einkauf && cd einkauf
+git checkout v<version> # the release to run, see Releases below
 cp .env.example .env    # set APP_HOST and PB_ENCRYPTION_KEY, chmod 600 .env
 docker compose run --rm einkauf superuser upsert <email> <password> --dir=/pb_data --encryptionEnv=PB_ENCRYPTION_KEY
 docker compose up -d
@@ -148,23 +150,40 @@ PocketBase applies the migrations on startup. Then open `https://<APP_HOST>/_/`,
 
 After the first deployment, check that the login rate limit tells devices apart. On one phone, using mobile data rather than your home Wi-Fi, log in with a wrong password eleven times within a minute until the app reports too many attempts. A second device on another network must still be able to log in. If it can't, the `X-Forwarded-For` header from Traefik doesn't reach PocketBase as expected, and every request seems to come from the same address. The trusted proxy setting is in `pb_migrations/1792264700_enable_rate_limits.js`; correct it with a new migration.
 
-Update:
+### Releases
 
-Before deploying, raise `VERSION` in `pb_public/js/version.js` and commit it, so the status bar at the bottom of the app shows which release a device runs. The version is the release date followed by a counter for the releases of that day: the first release on 18 October 2026 is `2026.10.18.0`, a second one on the same day `2026.10.18.1`. A unit test rejects malformed versions.
+Production runs releases, not whatever `main` points to at the moment. A release is a commit that sets the version, plus a Git tag `v<version>` on it. The version is the release date followed by a counter for the releases of that day: the first release on 19 October 2026 is `2026.10.19.0`, a second one on the same day `2026.10.19.1`. The status bar at the bottom of the app shows it, so you can tell which release a device runs.
 
-Then, on the server:
+Create a release on your development machine, on an up-to-date `main` without uncommitted changes:
 
 ```sh
-git pull --ff-only
+make release
+```
+
+It writes the new version to `pb_public/js/version.js`, regenerates `CHANGELOG.md` from the commit messages with [git-cliff](https://git-cliff.org/), commits both as `chore(release): <version>`, and tags that commit. The tag's message holds the release notes. Nothing is pushed: check the commit and the changelog first, then run the push command the target prints, for example `git push origin main v2026.10.19.0`.
+
+Don't change the version by hand, and never move or delete a tag that has been pushed; if a release turns out to be wrong, create a new one. A release that has not been pushed yet can be undone with `git tag -d v<version>` and `git reset --hard HEAD~1`.
+
+The changelog is meant for the people who run and develop the app, so it is in English and lists only features, fixes, performance improvements, refactorings and documentation changes. It relies on commit messages following [Conventional Commits](https://www.conventionalcommits.org/).
+
+### Update
+
+On the server, check out the release to run:
+
+```sh
+git fetch --tags
+git checkout v2026.10.19.0
 docker compose up -d
 docker compose restart einkauf
 ```
+
+The clone then has no branch checked out ("detached HEAD"). That is intended, because production runs a release rather than a branch; `git pull` does not apply here.
 
 `docker compose up -d` only recreates the container when `compose.yaml` changed. The restart is needed in every other case, because PocketBase loads hooks and applies migrations only when it starts; it does not watch for file changes in production. Check `docker compose logs einkauf` afterwards for errors.
 
 Installed apps load the new frontend the next time they start with a connection; nobody has to clear caches.
 
-To roll back, check out the previous commit and run the two `docker compose` commands from above again. If the rollback crosses a migration, revert that migration first, while the newer code is still checked out:
+To roll back, check out the tag of an earlier release and run the two `docker compose` commands from above again. If the rollback crosses a migration, revert that migration first, while the newer code is still checked out:
 
 ```sh
 docker compose exec einkauf pocketbase migrate down 1 --dir=/pb_data --migrationsDir=/pb_migrations

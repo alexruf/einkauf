@@ -33,3 +33,8 @@ context: |
 #     archive:
 #       guidance:
 #         - Summarize the archive outcome before finishing
+
+operations:
+  apply:
+    guidance:
+      - When all tasks are done and verified, archive the change (sync its specs) before anything is committed, so code, main specs and the archived change land in one commit.

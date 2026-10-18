@@ -30,6 +30,7 @@ PocketBase, no build step.
 | `compose.yaml`    | Production service (Docker Compose behind Traefik)   |
 | `openspec/specs/` | Capability specs; changes go through OpenSpec        |
 | `tests/`          | `unit/`, `api/` (`node --test`), `e2e/` (Playwright) |
+| `scripts/`        | Tooling scripts run by `make` (`release.sh`)         |
 
 Commands (Nix with flakes required, no Docker needed locally):
 
@@ -37,6 +38,10 @@ Commands (Nix with flakes required, no Docker needed locally):
 - `make clean` — delete `pb_data/`; keeps migrations
 - `make test` — unit + API tests (`node --test`), then e2e (Playwright); each
   run uses a temp PocketBase on a free port, never `pb_data/`
+- `make release` — next CalVer version, `CHANGELOG.md` (git-cliff,
+  `cliff.toml`), commit `chore(release): <version>` and tag `v<version>`,
+  local only (`scripts/release.sh`). Never push for the user; never move or
+  delete pushed `v*` tags. Production deploys by tag checkout.
 - `make check-version` — fail if `flake.nix` and `compose.yaml` pin different
   PocketBase versions
 - `nix develop -c pocketbase <cmd> --dir=./pb_data` — any other PocketBase CLI
@@ -72,10 +77,14 @@ Project rules:
   10/min bucket; use `openAs` (impersonation) unless testing login.
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
   DOM-free modules (`ids`, `storage`, `app-name`, `outbox`, `view`, `sync`,
-  `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`, bump
-  before each deploy. All writes go through the outbox. New files in `pb_public/` must be
-  added to `SHELL` in `sw.js` (a test enforces it). CSP is a meta tag in
+  `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
+  written only by `make release`; never edit it by hand. All writes go
+  through the outbox. New files in `pb_public/` must be added to `SHELL` in
+  `sw.js` (a test enforces it). CSP is a meta tag in
   `index.html`: no inline scripts/styles, item text only via `textContent`.
+- **OpenSpec flow:** apply, verify, then `/opsx:archive` (sync specs)
+  before committing; code, main specs and archived change go into one
+  commit. No separate archive commits.
 - **Server logic:** item hooks in `pb_hooks/items.pb.js`, cleanup cron and
   route in `pb_hooks/cleanup.pb.js`, public app-name route in
   `pb_hooks/app-name.pb.js`; shared code in `pb_hooks/items.js`
