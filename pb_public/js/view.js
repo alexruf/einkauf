@@ -1,5 +1,6 @@
-// Turns the last known server state plus the pending changes into the rows
-// the list shows. Pure, so it can be tested without a browser.
+// Turns the app's state into what the screen shows: the rows of the list,
+// the status bar indicators and the logout question. Pure, so it can be tested
+// without a browser.
 
 const UNKNOWN = 'Unbekannt';
 
@@ -67,4 +68,50 @@ export function buildRows(snapshot, ops, me) {
     return diff || a.id.localeCompare(b.id);
   });
   return rows;
+}
+
+const pad = (n) => String(n).padStart(2, '0');
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+// "heute, 14:32", "gestern, 18:05", "15.10., 09:10" or, in an earlier year,
+// "30.12.25, 17:45", in local time. Short, so it fits the status bar.
+function formatSyncTime(date, now) {
+  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+  if (daysAgo === 0) return `heute, ${time}`;
+  if (daysAgo === 1) return `gestern, ${time}`;
+  const year = date.getFullYear() === now.getFullYear() ? '' : pad(date.getFullYear() % 100);
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${year}, ${time}`;
+}
+
+// The status bar shows two indicators, each a colored dot with a text. The
+// state picks the color: 'ok' green, 'busy' and 'pending' yellow ('busy'
+// pulses), 'error' red, 'idle' grey.
+
+// connection: 'connecting', 'online' or 'offline'.
+export function connectionIndicator(connection) {
+  if (connection === 'online') return { state: 'ok', text: 'Verbunden' };
+  if (connection === 'offline') return { state: 'error', text: 'Offline' };
+  return { state: 'busy', text: 'Verbinde …' };
+}
+
+// pending: number of unsent changes; lastSync: ISO time up to which the list
+// is known to be current, or undefined; now: a Date.
+export function syncIndicator({ connection, pending, lastSync, now }) {
+  if (connection === 'online') {
+    if (pending === 0) return { state: 'ok', text: 'Synchronisiert' };
+    return { state: 'busy', text: pending === 1 ? 'Sende 1 Änderung' : `Sende ${pending} Änderungen` };
+  }
+  // Not connected: say how old the list on screen is.
+  const state = pending === 0 ? 'idle' : 'pending';
+  if (!lastSync) return { state, text: 'Noch nicht synchronisiert' };
+  return { state, text: `Stand ${formatSyncTime(new Date(lastSync), now)}` };
+}
+
+// The question of the logout dialog. Logging out deletes unsent changes, so
+// the dialog says how many there are.
+export function logoutQuestion(pending) {
+  if (pending === 0) return 'Wirklich abmelden?';
+  if (pending === 1) return '1 Änderung ist noch nicht übertragen und geht beim Abmelden verloren. Trotzdem abmelden?';
+  return `${pending} Änderungen sind noch nicht übertragen und gehen beim Abmelden verloren. Trotzdem abmelden?`;
 }

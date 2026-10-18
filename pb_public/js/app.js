@@ -6,8 +6,9 @@ import { newId } from './ids.js';
 import { createStore } from './storage.js';
 import { createAppName } from './app-name.js';
 import { createOutbox } from './outbox.js';
-import { buildRows } from './view.js';
+import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from './view.js';
 import { createSync } from './sync.js';
+import { VERSION } from './version.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -57,6 +58,7 @@ async function loadAppName() {
 }
 
 function showLogin(hint = '') {
+  closeAccountMenu();
   $('list-screen').hidden = true;
   $('account').hidden = true;
   $('login-screen').hidden = false;
@@ -71,11 +73,19 @@ function showList(user) {
   $('login-screen').hidden = true;
   $('list-screen').hidden = false;
   $('account').hidden = false;
-  $('user-name').textContent = user.name;
+  showUserName(user);
   render();
 }
 
+// In the header and in the account menu.
+function showUserName(user) {
+  $('user-name').textContent = user.name;
+  $('menu-user-name').textContent = user.name;
+}
+
 function setConnection(state) {
+  // Realtime kept the list current until now, so it counts as synced.
+  if (connection === 'online' && state !== 'online' && currentUser()) sync.markSynced();
   connection = state;
   render();
 }
@@ -105,6 +115,19 @@ function renderStatus() {
   const text = notice || (loggedIn && connection === 'offline' ? 'Offline – Änderungen werden später übertragen.' : '');
   $('status').textContent = text;
   $('status').hidden = !text;
+  renderIndicator($('connection-indicator'), loggedIn && connectionIndicator(connection));
+  renderIndicator(
+    $('sync-indicator'),
+    loggedIn && syncIndicator({ connection, pending: outbox.list().length, lastSync: store.get('lastSync'), now: new Date() }),
+  );
+}
+
+// `indicator` is { state, text }, or false to hide the element.
+function renderIndicator(element, indicator) {
+  element.hidden = !indicator;
+  if (!indicator) return;
+  element.dataset.state = indicator.state;
+  element.querySelector('.indicator-text').textContent = indicator.text;
 }
 
 // List
@@ -234,7 +257,7 @@ async function refreshAuth() {
   try {
     await pb.collection('users').authRefresh();
     const user = currentUser();
-    if (user) $('user-name').textContent = user.name;
+    if (user) showUserName(user);
   } catch (error) {
     if (error?.status === 401) endSession('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.');
   }
@@ -256,6 +279,28 @@ function endSession(hint) {
   pb.realtime.unsubscribe().catch(() => {});
   pb.authStore.clear();
   showLogin(hint);
+}
+
+// Browsers without popover support show the menu inline, so there is
+// nothing to close.
+function closeAccountMenu() {
+  const menu = $('account-menu');
+  if (typeof menu.hidePopover === 'function' && menu.matches(':popover-open')) menu.hidePopover();
+}
+
+function requestLogout() {
+  closeAccountMenu();
+  const dialog = $('confirm-logout');
+  $('logout-question').textContent = logoutQuestion(outbox.list().length);
+  dialog.returnValue = '';
+  dialog.addEventListener(
+    'close',
+    () => {
+      if (dialog.returnValue === 'logout') logout();
+    },
+    { once: true },
+  );
+  dialog.showModal();
 }
 
 function logout() {
@@ -303,20 +348,25 @@ $('add-form').addEventListener('submit', (event) => {
   if (text) addItem(text);
 });
 
-$('logout').addEventListener('click', logout);
+$('logout').addEventListener('click', requestLogout);
 
 window.addEventListener('online', () => currentUser() && flush());
 // The browser knowing it is offline is reliable; it claiming to be online
 // is not, so that only triggers a flush.
 window.addEventListener('offline', () => currentUser() && setConnection('offline'));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && currentUser()) flush();
+  if (!currentUser()) return;
+  if (document.visibilityState === 'visible') flush();
+  // The app may be closed or frozen in the background; up to here the list
+  // was current.
+  else if (connection === 'online') sync.markSynced();
 });
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch((error) => console.error('Service worker registration failed', error));
 }
 
+$('app-version').textContent = VERSION;
 showAppName();
 loadAppName();
 

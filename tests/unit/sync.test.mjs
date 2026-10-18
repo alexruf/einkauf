@@ -60,7 +60,7 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
   return { pb: { collection: (name) => collections[name] }, server, calls };
 }
 
-function setup(pbOptions) {
+function setup(pbOptions, { now } = {}) {
   const fake = fakePb(pbOptions);
   const store = createStore(new MemoryStorage());
   store.claim('anna');
@@ -73,6 +73,7 @@ function setup(pbOptions) {
     onOffline: () => events.offline++,
     onAuthError: () => events.auth++,
     onRejected: (op) => events.rejected.push(op),
+    now,
   });
   return { ...fake, store, outbox, sync, events };
 }
@@ -229,4 +230,23 @@ test('given a realtime event during a reload, when the older reload result arriv
   const byId = new Map(store.get('snapshot').items.map((i) => [i.id, i]));
   assert.equal(byId.get('eier')?.text, 'Eier');
   assert.equal(byId.get('milch').checked, true);
+});
+
+test('given a successful flush, then the time of the sync is remembered', async () => {
+  const { sync, store } = setup({}, { now: () => '2026-10-18T12:00:00.000Z' });
+  await sync.flush();
+  assert.equal(store.get('lastSync'), '2026-10-18T12:00:00.000Z');
+});
+
+test('given a flush that ends offline, then the previous sync time is kept', async () => {
+  const { sync, store } = setup({ failures: { listItems: httpError(0) } }, { now: () => '2026-10-18T12:00:00.000Z' });
+  store.set('lastSync', '2026-10-17T08:00:00.000Z');
+  await sync.flush();
+  assert.equal(store.get('lastSync'), '2026-10-17T08:00:00.000Z');
+});
+
+test('given the app knows the list is current, when marking it synced, then the current time is remembered', () => {
+  const { sync, store } = setup({}, { now: () => '2026-10-18T13:30:00.000Z' });
+  sync.markSynced();
+  assert.equal(store.get('lastSync'), '2026-10-18T13:30:00.000Z');
 });

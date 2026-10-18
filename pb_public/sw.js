@@ -19,6 +19,7 @@ const SHELL = [
   '/js/outbox.js',
   '/js/storage.js',
   '/js/sync.js',
+  '/js/version.js',
   '/js/view.js',
   '/vendor/pocketbase.es.mjs',
   '/icons/icon.svg',

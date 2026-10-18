@@ -1,4 +1,4 @@
-import { test, expect, users, server, deleteAllItems, createItem, row, listItems, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
+import { test, expect, users, server, deleteAllItems, createItem, row, listItems, waitForServiceWorker, goOffline, goOnline, logOut } from '../support/e2e.mjs';
 import { impersonate } from '../support/server.mjs';
 
 const { anna, ben } = users;
@@ -41,8 +41,7 @@ test('given a logged-in user, when logging out and reopening the app offline, th
   await expect(row(annaPage, 'Milch')).toBeVisible();
   await waitForServiceWorker(annaPage);
 
-  await annaPage.getByRole('button', { name: 'Abmelden' }).click();
-  await expect(annaPage.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+  await logOut(annaPage);
 
   await goOffline(annaPage);
   await annaPage.reload();

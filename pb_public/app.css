@@ -2,12 +2,14 @@
   color-scheme: light dark;
   --bg: #f6f5f2;
   --surface: #ffffff;
+  --raised: #ffffff;
   --text: #1d1d1b;
   --muted: #6b6a66;
   --line: #e3e1db;
   --accent: #2f7d4f;
   --accent-text: #ffffff;
   --danger: #b3261e;
+  --warn: #b7791f;
   --notice: #fff4d6;
   --notice-text: #5c4300;
   --radius: 0.75rem;
@@ -18,12 +20,14 @@
   :root {
     --bg: #151614;
     --surface: #1f201d;
+    --raised: #2a2b27;
     --text: #ecebe6;
     --muted: #9a9993;
     --line: #33342f;
     --accent: #5dbb83;
     --accent-text: #0d1f14;
     --danger: #f2948c;
+    --warn: #e5b85c;
     --notice: #3a3014;
     --notice-text: #f3dc9a;
   }
@@ -81,14 +85,6 @@ button.danger {
   font-weight: 600;
 }
 
-button.link {
-  border: none;
-  background: none;
-  color: var(--muted);
-  padding: 0 0.5rem;
-  text-decoration: underline;
-}
-
 input[type="text"],
 input[type="email"],
 input[type="password"] {
@@ -136,10 +132,103 @@ main {
   color: var(--muted);
 }
 
+.account-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0 0.5rem;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+.account-button svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .user-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Opens below the user name, at the right edge of the centered column, as
+   a card clearly above the page. */
+.account-menu {
+  position: fixed;
+  inset: auto;
+  top: calc(max(0.75rem, env(safe-area-inset-top)) + var(--tap) + 0.25rem);
+  right: max(1rem, env(safe-area-inset-right), calc((100vw - 40rem) / 2 + 1rem));
+  min-width: 12rem;
+  max-width: calc(100vw - 2rem);
+  margin: 0;
+  padding: 0.375rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.35);
+}
+
+/* Dims the page while the menu is open, so what it covers recedes. */
+.account-menu::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
+.menu-header {
+  margin: 0 0 0.375rem;
+  padding: 0.5rem 0.625rem 0.625rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.menu-user-name {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0 0.625rem;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.menu-item svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.danger-text {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .status {
@@ -152,8 +241,108 @@ main {
   font-size: 0.9375rem;
 }
 
+/* Leaves room below the last item for the fixed status bar. */
 main {
-  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
+
+/* Status bar: fixed to the bottom, content aligned with the column above.
+   Translucent, so the list shows through faintly when scrolled under it. */
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.4375rem max(1rem, env(safe-area-inset-right)) 0.4375rem max(1rem, env(safe-area-inset-left));
+}
+
+/* A dot plus text on a faint tint of the state's color. */
+.indicator {
+  --state: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.1875rem 0.4375rem 0.1875rem 0.375rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--state) 14%, transparent);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* The connection text is short; only the sync text may give way. */
+#connection-indicator {
+  flex-shrink: 0;
+}
+
+.indicator[data-state="ok"] {
+  --state: var(--accent);
+}
+
+.indicator[data-state="busy"],
+.indicator[data-state="pending"] {
+  --state: var(--warn);
+}
+
+.indicator[data-state="error"] {
+  --state: var(--danger);
+}
+
+.indicator-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--state);
+}
+
+.indicator[data-state="busy"] .dot {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--state) 60%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 0.25rem transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indicator[data-state="busy"] .dot {
+    animation: none;
+  }
+}
+
+.version {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 0.25rem;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Login */
@@ -336,7 +525,7 @@ main {
   text-align: center;
 }
 
-/* Delete confirmation */
+/* Confirmation dialogs */
 
 .confirm {
   width: min(24rem, calc(100vw - 2rem));

@@ -61,7 +61,9 @@ make help           # list all targets
 - App: <http://localhost:8090/>
 - Admin UI: <http://localhost:8090/_/>
 
-On the first start, PocketBase prints a link to create the first superuser. Alternatively:
+`make dev` only listens on `localhost`, so other devices such as a phone cannot reach it. To try the app on a phone, start the server as described in [Manual checks on real phones](#manual-checks-on-real-phones).
+
+When `pb_data/` is empty, PocketBase prints a link to create the first superuser. Data from an earlier session stays until you run `make clean`, and with it any superuser created back then, so the link does not appear again. The following command works in both cases: it creates the superuser, or sets a new password if one with that email already exists.
 
 ```sh
 nix develop -c pocketbase superuser upsert you@example.com <password> --dir=./pb_data
@@ -147,6 +149,10 @@ PocketBase applies the migrations on startup. Then open `https://<APP_HOST>/_/`,
 After the first deployment, check that the login rate limit tells devices apart. On one phone, using mobile data rather than your home Wi-Fi, log in with a wrong password eleven times within a minute until the app reports too many attempts. A second device on another network must still be able to log in. If it can't, the `X-Forwarded-For` header from Traefik doesn't reach PocketBase as expected, and every request seems to come from the same address. The trusted proxy setting is in `pb_migrations/1792264700_enable_rate_limits.js`; correct it with a new migration.
 
 Update:
+
+Before deploying, raise `VERSION` in `pb_public/js/version.js` and commit it, so the status bar at the bottom of the app shows which release a device runs. The version is the release date followed by a counter for the releases of that day: the first release on 18 October 2026 is `2026.10.18.0`, a second one on the same day `2026.10.18.1`. A unit test rejects malformed versions.
+
+Then, on the server:
 
 ```sh
 git pull --ff-only

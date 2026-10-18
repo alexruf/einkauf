@@ -50,6 +50,15 @@ export async function openAs(page, user, { duration } = {}) {
   await page.reload();
 }
 
+// Logs out the way a user does: through the account menu and the
+// confirmation dialog.
+export async function logOut(page) {
+  await page.locator('.account-button').click();
+  await page.getByRole('button', { name: 'Abmelden' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Abmelden' }).click();
+  await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+}
+
 // The rows of the list as the user sees them.
 export const rows = (page) => page.locator('#items > li');
 export const row = (page, text) => rows(page).filter({ has: page.locator('.text', { hasText: text }) });

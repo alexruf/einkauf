@@ -34,6 +34,7 @@ export function createSync({
   onOffline = () => {},
   onAuthError = () => {},
   onRejected = () => {},
+  now = () => new Date().toISOString(),
 }) {
   const items = () => pb.collection('items');
 
@@ -88,6 +89,13 @@ export function createSync({
     return 'done';
   }
 
+  // Remembers that the list is current as of now. Besides after a reload,
+  // the app calls this when it stops being online, because realtime events
+  // kept the list current until then.
+  function markSynced() {
+    store.set('lastSync', now());
+  }
+
   // Realtime events received while a reload is running. The reload's result
   // may predate them, so they are applied again on top of it.
   let eventsDuringReload = null;
@@ -104,6 +112,7 @@ export function createSync({
       let snapshot = { items: itemRecords.map(pickItem), users: users.map(({ id, name }) => ({ id, name })) };
       for (const event of eventsDuringReload) snapshot = withEvent(snapshot, event);
       store.set('snapshot', snapshot);
+      markSynced();
     } finally {
       eventsDuringReload = null;
     }
@@ -155,5 +164,5 @@ export function createSync({
     onChange();
   }
 
-  return { flush, applyEvent };
+  return { flush, applyEvent, markSynced };
 }
