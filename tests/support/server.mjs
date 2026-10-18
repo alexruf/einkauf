@@ -2,7 +2,7 @@
 // migrations, hooks and frontend, but its own temporary data directory and a
 // free port, so tests never touch pb_data/ or a running `make dev` server.
 
-import { spawn, execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';

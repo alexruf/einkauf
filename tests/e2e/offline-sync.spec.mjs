@@ -1,4 +1,16 @@
-import { test, expect, users, deleteAllItems, createItem, row, rows, listItems, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  listItems,
+  row,
+  rows,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
 
 const { ben } = users;
 
@@ -22,7 +34,10 @@ async function annaGoesOffline(annaPage, items) {
   await expect(annaPage.getByRole('status')).toContainText('Offline');
 }
 
-test('given Anna changes the list offline, when she reconnects, then everyone sees her changes and she sees theirs', async ({ annaPage, benPage }) => {
+test('given Anna changes the list offline, when she reconnects, then everyone sees her changes and she sees theirs', async ({
+  annaPage,
+  benPage,
+}) => {
   await annaGoesOffline(annaPage, ['Milch']);
 
   await add(annaPage, 'Eier');
@@ -56,7 +71,10 @@ test('given Anna changes the list offline, when she reconnects, then everyone se
   await expect(rows(annaPage)).toHaveCount(3);
 });
 
-test('given Ben deletes an item Anna checked off offline, when Anna reconnects, then it stays deleted and her other changes sync', async ({ annaPage, benPage }) => {
+test('given Ben deletes an item Anna checked off offline, when Anna reconnects, then it stays deleted and her other changes sync', async ({
+  annaPage,
+  benPage,
+}) => {
   await annaGoesOffline(annaPage, ['Milch', 'Brot']);
   await row(annaPage, 'Milch').getByRole('checkbox').check();
   await add(annaPage, 'Eier');
@@ -79,7 +97,9 @@ test('given Ben deletes an item Anna checked off offline, when Anna reconnects, 
   await expect(annaPage.getByRole('status')).toBeHidden();
 });
 
-test('given the realtime connection fails right after reconnecting, when the server answers again, then the app becomes connected', async ({ annaPage }) => {
+test('given the realtime connection fails right after reconnecting, when the server answers again, then the app becomes connected', async ({
+  annaPage,
+}) => {
   await annaGoesOffline(annaPage, ['Milch']);
   // Opening the app offline leaves it without a realtime connection.
   await annaPage.reload();
@@ -87,7 +107,11 @@ test('given the realtime connection fails right after reconnecting, when the ser
 
   // The first realtime attempt after reconnecting is refused, as under rate
   // limiting; later ones succeed.
-  await annaPage.route('**/api/realtime', (route) => route.fulfill({ status: 429, json: { message: 'Too Many Requests' } }), { times: 1 });
+  await annaPage.route(
+    '**/api/realtime',
+    (route) => route.fulfill({ status: 429, json: { message: 'Too Many Requests' } }),
+    { times: 1 },
+  );
   await goOnline(annaPage);
 
   await expect(annaPage.locator('#connection-indicator')).toContainText('Verbunden', { timeout: 15000 });

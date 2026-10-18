@@ -2,13 +2,13 @@
 // a browser.
 
 import PocketBase from '/vendor/pocketbase.es.mjs';
-import { newId } from './ids.js';
-import { createStore } from './storage.js';
 import { createAppName } from './app-name.js';
+import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
-import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from './view.js';
+import { createStore } from './storage.js';
 import { createSync } from './sync.js';
 import { VERSION } from './version.js';
+import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from './view.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -36,7 +36,8 @@ let connection = 'connecting';
 let notice = '';
 let noticeTimer;
 
-const currentUser = () => (pb.authStore.isValid && pb.authStore.record?.collectionName === 'users' ? pb.authStore.record : null);
+const currentUser = () =>
+  pb.authStore.isValid && pb.authStore.record?.collectionName === 'users' ? pb.authStore.record : null;
 
 // Screens
 
@@ -118,7 +119,8 @@ function renderStatus() {
   renderIndicator($('connection-indicator'), loggedIn && connectionIndicator(connection));
   renderIndicator(
     $('sync-indicator'),
-    loggedIn && syncIndicator({ connection, pending: outbox.list().length, lastSync: store.get('lastSync'), now: new Date() }),
+    loggedIn &&
+      syncIndicator({ connection, pending: outbox.list().length, lastSync: store.get('lastSync'), now: new Date() }),
   );
 }
 
@@ -429,7 +431,9 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch((error) => console.error('Service worker registration failed', error));
+  navigator.serviceWorker
+    .register('/sw.js')
+    .catch((error) => console.error('Service worker registration failed', error));
 }
 
 $('app-version').textContent = VERSION;

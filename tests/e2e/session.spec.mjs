@@ -1,4 +1,17 @@
-import { test, expect, users, server, deleteAllItems, createItem, row, listItems, waitForServiceWorker, goOffline, goOnline, logOut } from '../support/e2e.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  listItems,
+  logOut,
+  row,
+  server,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
 import { impersonate } from '../support/server.mjs';
 
 const { anna, ben } = users;
@@ -35,7 +48,9 @@ async function pendingChangeThenExpiredSession(page) {
   await expect(page.getByText('Eier')).toHaveCount(0);
 }
 
-test('given a logged-in user, when logging out and reopening the app offline, then no list data is shown', async ({ annaPage }) => {
+test('given a logged-in user, when logging out and reopening the app offline, then no list data is shown', async ({
+  annaPage,
+}) => {
   await createItem(anna, 'Milch');
   await annaPage.reload();
   await expect(row(annaPage, 'Milch')).toBeVisible();
@@ -47,12 +62,17 @@ test('given a logged-in user, when logging out and reopening the app offline, th
   await annaPage.reload();
   await expect(annaPage.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
   await expect(annaPage.getByText('Milch')).toHaveCount(0);
-  const stored = await annaPage.evaluate(() => [localStorage.getItem('einkauf'), localStorage.getItem('pocketbase_auth')]);
+  const stored = await annaPage.evaluate(() => [
+    localStorage.getItem('einkauf'),
+    localStorage.getItem('pocketbase_auth'),
+  ]);
   expect(stored).toEqual([null, null]);
   await goOnline(annaPage);
 });
 
-test('given pending changes and an expired session, when the same user logs in again, then the changes are synced', async ({ annaPage }) => {
+test('given pending changes and an expired session, when the same user logs in again, then the changes are synced', async ({
+  annaPage,
+}) => {
   await pendingChangeThenExpiredSession(annaPage);
 
   await goOnline(annaPage);
@@ -64,7 +84,9 @@ test('given pending changes and an expired session, when the same user logs in a
   expect(eier?.createdBy).toBe(anna.id);
 });
 
-test('given Anna\'s pending changes, when Ben logs in on the same device, then they are discarded and not sent', async ({ annaPage }) => {
+test("given Anna's pending changes, when Ben logs in on the same device, then they are discarded and not sent", async ({
+  annaPage,
+}) => {
   await pendingChangeThenExpiredSession(annaPage);
 
   await goOnline(annaPage);

@@ -1,4 +1,4 @@
-import { test, expect, users, server, deleteAllItems, createItem, row, rows, listItems } from '../support/e2e.mjs';
+import { createItem, deleteAllItems, expect, listItems, row, rows, server, test, users } from '../support/e2e.mjs';
 import { api, createUser } from '../support/server.mjs';
 
 const { anna, ben } = users;
@@ -10,7 +10,10 @@ async function add(page, text) {
   await page.getByRole('button', { name: 'Hinzufügen' }).click();
 }
 
-test('given Anna and Ben online, when Anna adds an item, then Ben sees it within seconds with "von Anna"', async ({ annaPage, benPage }) => {
+test('given Anna and Ben online, when Anna adds an item, then Ben sees it within seconds with "von Anna"', async ({
+  annaPage,
+  benPage,
+}) => {
   await add(annaPage, 'Milch');
 
   await expect(row(annaPage, 'Milch')).toBeVisible();
@@ -20,7 +23,10 @@ test('given Anna and Ben online, when Anna adds an item, then Ben sees it within
   await expect(row(annaPage, 'Milch').locator('.pending')).toBeHidden();
 });
 
-test('given an item by Anna, when Ben checks it off, then Anna sees it checked with "zuletzt Ben"', async ({ annaPage, benPage }) => {
+test('given an item by Anna, when Ben checks it off, then Anna sees it checked with "zuletzt Ben"', async ({
+  annaPage,
+  benPage,
+}) => {
   await add(annaPage, 'Brot');
   await add(annaPage, 'Butter');
   await expect(row(benPage, 'Brot')).toBeVisible();
@@ -50,7 +56,10 @@ test('given a checked item, when Anna un-checks it, then it is open again for bo
   await expect(row(benPage, 'Käse')).not.toHaveClass(/is-checked/);
 });
 
-test('given item text with markup, when added, then everyone sees exactly that text and no script runs', async ({ annaPage, benPage }) => {
+test('given item text with markup, when added, then everyone sees exactly that text and no script runs', async ({
+  annaPage,
+  benPage,
+}) => {
   const markup = '<img src=x onerror=alert(1)>';
   let dialogs = 0;
   for (const page of [annaPage, benPage]) page.on('dialog', () => dialogs++);
@@ -72,7 +81,10 @@ test('given empty or whitespace text, when adding, then no item is created', asy
 test('given an item whose creator account was removed, then it shows "Unbekannt"', async ({ annaPage, benPage }) => {
   const dora = await createUser(server, 'Dora');
   await createItem(dora, 'Salz');
-  await api(server.url, `/api/collections/users/records/${dora.id}`, { method: 'DELETE', token: server.superuserToken });
+  await api(server.url, `/api/collections/users/records/${dora.id}`, {
+    method: 'DELETE',
+    token: server.superuserToken,
+  });
 
   await annaPage.reload();
   await expect(row(annaPage, 'Salz').locator('.meta')).toHaveText('von Unbekannt');

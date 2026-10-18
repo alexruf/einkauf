@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { createStore } from '../../pb_public/js/storage.js';
 import { MemoryStorage } from '../support/memory-storage.mjs';
 
@@ -22,7 +22,7 @@ test('given data stored for Anna, when Anna claims the storage again, then the d
   assert.deepEqual(store.get('outbox'), [1]);
 });
 
-test('given data stored for Anna, when Ben claims the storage, then Anna\'s data is discarded', () => {
+test("given data stored for Anna, when Ben claims the storage, then Anna's data is discarded", () => {
   const store = createStore(new MemoryStorage());
   store.claim('anna');
   store.set('outbox', [1]);

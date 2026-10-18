@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { createOutbox } from '../../pb_public/js/outbox.js';
 import { createStore } from '../../pb_public/js/storage.js';
 import { MemoryStorage } from '../support/memory-storage.mjs';
@@ -22,7 +22,11 @@ test('given several changes, when listing the outbox, then they come in the orde
   outbox.add({ type: 'setChecked', id: 'a', checked: true });
   assert.deepEqual(
     outbox.list().map((op) => [op.type, op.id]),
-    [['create', 'a'], ['setChecked', 'b'], ['setChecked', 'a']],
+    [
+      ['create', 'a'],
+      ['setChecked', 'b'],
+      ['setChecked', 'a'],
+    ],
   );
 });
 
@@ -37,7 +41,10 @@ test('given pending changes, when the page reloads, then they are still pending 
   setup(device).outbox.add({ type: 'create', id: 'a', text: 'Milch' });
   setup(device).outbox.add({ type: 'create', id: 'b', text: 'Brot' });
   const reloaded = createOutbox(createStore(device));
-  assert.deepEqual(reloaded.list().map((op) => op.id), ['a', 'b']);
+  assert.deepEqual(
+    reloaded.list().map((op) => op.id),
+    ['a', 'b'],
+  );
 });
 
 test('given pending changes, when one is removed, then only that one is gone', () => {
@@ -45,5 +52,8 @@ test('given pending changes, when one is removed, then only that one is gone', (
   const first = outbox.add({ type: 'create', id: 'a', text: 'Milch' });
   outbox.add({ type: 'setChecked', id: 'a', checked: true });
   outbox.remove(first);
-  assert.deepEqual(outbox.list().map((op) => op.type), ['setChecked']);
+  assert.deepEqual(
+    outbox.list().map((op) => op.type),
+    ['setChecked'],
+  );
 });

@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { newId } from '../../pb_public/js/ids.js';
 
 test('given the default random source, when generating ids, then they match the PocketBase id pattern', () => {

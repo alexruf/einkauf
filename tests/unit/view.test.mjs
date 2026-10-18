@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from '../../pb_public/js/view.js';
 
 const users = [
@@ -30,7 +30,12 @@ test('given open and checked items, then open ones come first by creation, check
       item('open-early', { created: '2026-10-17 08:10:00.000Z' }),
     ],
   };
-  assert.deepEqual(texts(buildRows(snapshot, [], 'anna')), ['open-early', 'open-late', 'checked-late', 'checked-early']);
+  assert.deepEqual(texts(buildRows(snapshot, [], 'anna')), [
+    'open-early',
+    'open-late',
+    'checked-late',
+    'checked-early',
+  ]);
 });
 
 test('given a pending create, then it is shown as open, pending, by me, and sorted by the local time', () => {
@@ -86,7 +91,10 @@ test('given a pending text change, then the item shows the new text, pending and
 });
 
 test('given a pending text change of a checked item, then it stays checked in its place', () => {
-  const snapshot = { users, items: [item('brot', { text: 'Brot', checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })] };
+  const snapshot = {
+    users,
+    items: [item('brot', { text: 'Brot', checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })],
+  };
   const ops = [{ type: 'setText', id: 'brot', text: 'Vollkornbrot', at: '2026-10-17T10:00:00.000Z' }];
   const [row] = buildRows(snapshot, ops, 'anna');
   assert.equal(row.checked, true);
@@ -117,7 +125,10 @@ test('given a pending create the server already has, then the item is shown once
 });
 
 test('given an item whose creator was deleted, then the creator is shown as Unbekannt', () => {
-  const snapshot = { users, items: [item('Brot', { createdBy: '', updatedBy: 'ben' }), item('Salz', { createdBy: '', updatedBy: '' })] };
+  const snapshot = {
+    users,
+    items: [item('Brot', { createdBy: '', updatedBy: 'ben' }), item('Salz', { createdBy: '', updatedBy: '' })],
+  };
   const rows = buildRows(snapshot, [], 'anna');
   assert.equal(rows[0].meta, 'von Unbekannt · zuletzt Ben');
   assert.equal(rows[1].meta, 'von Unbekannt');
@@ -166,7 +177,7 @@ test('given a pending claim, then the item is claimed by me, pending and last ch
   assert.equal(released.meta, 'von Anna · zuletzt Ben');
 });
 
-test('given a pending release of someone else\'s claim, then the item is unclaimed and pending', () => {
+test("given a pending release of someone else's claim, then the item is unclaimed and pending", () => {
   const ops = [{ type: 'setClaimed', id: 'Milch', claimed: false, at: '2026-10-17T10:00:00.000Z' }];
   const [row] = buildRows({ users, items: [item('Milch', { claimedBy: 'anna' })] }, ops, 'ben');
   assert.equal(row.claim, null);
@@ -175,7 +186,11 @@ test('given a pending release of someone else\'s claim, then the item is unclaim
 
 test('given a pending claim of a checked item, then it is ignored', () => {
   const ops = [{ type: 'setClaimed', id: 'Milch', claimed: true, at: '2026-10-17T10:00:00.000Z' }];
-  const [row] = buildRows({ users, items: [item('Milch', { checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })] }, ops, 'ben');
+  const [row] = buildRows(
+    { users, items: [item('Milch', { checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })] },
+    ops,
+    'ben',
+  );
   assert.equal(row.claim, null);
   assert.equal(row.pending, false);
 });
@@ -200,7 +215,8 @@ test('given no snapshot yet, then only pending items are shown', () => {
 // Local dates, so the expected times hold in every time zone.
 const at = (day, hours, minutes) => new Date(2026, 9, day, hours, minutes);
 const now = at(18, 20, 0);
-const offlineSync = (lastSync, pending = 0) => syncIndicator({ connection: 'offline', pending, lastSync: lastSync?.toISOString(), now });
+const offlineSync = (lastSync, pending = 0) =>
+  syncIndicator({ connection: 'offline', pending, lastSync: lastSync?.toISOString(), now });
 
 test('given the connection states, then the connection indicator shows state and text for each', () => {
   assert.deepEqual(connectionIndicator('connecting'), { state: 'busy', text: 'Verbinde …' });
@@ -209,7 +225,10 @@ test('given the connection states, then the connection indicator shows state and
 });
 
 test('given the app is online without pending changes, then the sync indicator says synchronized', () => {
-  assert.deepEqual(syncIndicator({ connection: 'online', pending: 0, lastSync: undefined, now }), { state: 'ok', text: 'Synchronisiert' });
+  assert.deepEqual(syncIndicator({ connection: 'online', pending: 0, lastSync: undefined, now }), {
+    state: 'ok',
+    text: 'Synchronisiert',
+  });
 });
 
 test('given the app is online with pending changes, then the sync indicator says how many are being sent', () => {
@@ -235,7 +254,12 @@ test('given the app is not online after a sync in an earlier year, then the sync
 });
 
 test('given the app is connecting, then the sync indicator shows the time of the last sync', () => {
-  const indicator = syncIndicator({ connection: 'connecting', pending: 0, lastSync: at(18, 14, 32).toISOString(), now });
+  const indicator = syncIndicator({
+    connection: 'connecting',
+    pending: 0,
+    lastSync: at(18, 14, 32).toISOString(),
+    now,
+  });
   assert.deepEqual(indicator, { state: 'idle', text: 'Stand heute, 14:32' });
 });
 
@@ -253,6 +277,12 @@ test('given no pending changes, then the logout question is a plain confirmation
 });
 
 test('given pending changes, then the logout question says how many will be lost', () => {
-  assert.equal(logoutQuestion(1), '1 Änderung ist noch nicht übertragen und geht beim Abmelden verloren. Trotzdem abmelden?');
-  assert.equal(logoutQuestion(2), '2 Änderungen sind noch nicht übertragen und gehen beim Abmelden verloren. Trotzdem abmelden?');
+  assert.equal(
+    logoutQuestion(1),
+    '1 Änderung ist noch nicht übertragen und geht beim Abmelden verloren. Trotzdem abmelden?',
+  );
+  assert.equal(
+    logoutQuestion(2),
+    '2 Änderungen sind noch nicht übertragen und gehen beim Abmelden verloren. Trotzdem abmelden?',
+  );
 });

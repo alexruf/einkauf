@@ -1,6 +1,6 @@
-import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, createUser } from '../support/server.mjs';
+import { after, before, test } from 'node:test';
+import { createUser, startServer } from '../support/server.mjs';
 
 // Must match the *:auth rule in the rate limit migration.
 const AUTH_LIMIT = 10;

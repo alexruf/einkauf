@@ -1,4 +1,4 @@
-import { test, expect } from '../support/e2e.mjs';
+import { expect, test } from '../support/e2e.mjs';
 
 // The default headless shell does not evaluate installability and always
 // reports no errors; the full Chromium build does.
@@ -11,7 +11,11 @@ const installabilityErrors = async (cdp) =>
     .map((e) => e.errorId)
     .filter((id) => id !== 'in-incognito');
 
-test('given the start page, then Chromium finds an installable standalone app with name and icons', async ({ page, browser, baseURL }) => {
+test('given the start page, then Chromium finds an installable standalone app with name and icons', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
   await page.goto('/');
   const cdp = await page.context().newCDPSession(page);
 

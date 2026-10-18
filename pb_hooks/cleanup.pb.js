@@ -14,9 +14,14 @@ cronAdd("einkauf_cleanup", "0 * * * *", () => {
 
 // Runs the same cleanup on demand. The tests use it so they don't have to wait
 // for the hourly schedule.
-routerAdd("POST", "/api/einkauf/cleanup", (e) => {
-  const items = require(`${__hooks}/items.js`);
-  const deleted = items.deleteOldCheckedItems(e.app);
-  const released = items.releaseExpiredClaims(e.app);
-  return e.json(200, { deleted, released });
-}, $apis.requireSuperuserAuth());
+routerAdd(
+  "POST",
+  "/api/einkauf/cleanup",
+  (e) => {
+    const items = require(`${__hooks}/items.js`);
+    const deleted = items.deleteOldCheckedItems(e.app);
+    const released = items.releaseExpiredClaims(e.app);
+    return e.json(200, { deleted, released });
+  },
+  $apis.requireSuperuserAuth(),
+);

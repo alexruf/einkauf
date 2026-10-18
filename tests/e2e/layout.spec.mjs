@@ -1,4 +1,4 @@
-import { test, expect, users, deleteAllItems, createItem, openAs, row, listItems } from '../support/e2e.mjs';
+import { createItem, deleteAllItems, expect, listItems, openAs, row, test, users } from '../support/e2e.mjs';
 
 const { anna, ben } = users;
 
@@ -7,7 +7,9 @@ test.beforeEach(deleteAllItems);
 test.describe('on a 360 px wide phone', () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
 
-  test('given a full list, then nothing scrolls horizontally and every tap target is at least 44 px', async ({ page }) => {
+  test('given a full list, then nothing scrolls horizontally and every tap target is at least 44 px', async ({
+    page,
+  }) => {
     await createItem(anna, 'Milch');
     await createItem(ben, 'Ein sehr langer Eintrag ohne Leerzeichen: ' + 'x'.repeat(150));
     await createItem(anna, 'Brot');
@@ -37,7 +39,9 @@ test.describe('on a 360 px wide phone', () => {
     // the rest of the row.
     const rowBox = await row(page, 'Milch').boundingBox();
     const toggleBox = await row(page, 'Milch').locator('label.toggle').boundingBox();
-    const buttonsWidth = await row(page, 'Milch').locator('button').evaluateAll((els) => els.reduce((sum, el) => sum + el.offsetWidth, 0));
+    const buttonsWidth = await row(page, 'Milch')
+      .locator('button')
+      .evaluateAll((els) => els.reduce((sum, el) => sum + el.offsetWidth, 0));
     // The claimed row's padding is part of its box but not available to the label.
     const padding = await row(page, 'Milch').evaluate((el) => {
       const style = getComputedStyle(el);
@@ -60,7 +64,9 @@ test.describe('on a 360 px wide phone', () => {
 test.describe('in a desktop browser', () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
-  test('given the list, then it is a centered column and an item can be added by typing and Enter', async ({ page }) => {
+  test('given the list, then it is a centered column and an item can be added by typing and Enter', async ({
+    page,
+  }) => {
     await openAs(page, anna);
     const input = page.getByLabel('Neuer Eintrag');
     await input.focus();

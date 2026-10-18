@@ -1,4 +1,14 @@
-import { test, expect, users, deleteAllItems, createItem, row, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  row,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
 
 const { anna } = users;
 
@@ -12,7 +22,9 @@ test('given a logged-in user, then the header shows the display name and no logo
   await expect(annaPage.getByRole('button', { name: 'Abmelden' })).toHaveCount(0);
 });
 
-test('given the open account menu, then it names the logged-in user and dims the page behind it', async ({ annaPage }) => {
+test('given the open account menu, then it names the logged-in user and dims the page behind it', async ({
+  annaPage,
+}) => {
   await menuButton(annaPage).click();
 
   const menu = annaPage.locator('#account-menu');
@@ -22,7 +34,9 @@ test('given the open account menu, then it names the logged-in user and dims the
   expect(backdrop).not.toBe('rgba(0, 0, 0, 0)');
 });
 
-test('given the account menu, when it is opened from the name and Escape is pressed, then it closes again', async ({ annaPage }) => {
+test('given the account menu, when it is opened from the name and Escape is pressed, then it closes again', async ({
+  annaPage,
+}) => {
   await menuButton(annaPage).click();
   await expect(logoutEntry(annaPage)).toBeVisible();
 
@@ -32,7 +46,9 @@ test('given the account menu, when it is opened from the name and Escape is pres
   await expect(menuButton(annaPage)).toBeVisible();
 });
 
-test('given the logout dialog, when the user cancels, then they stay logged in with the list unchanged', async ({ annaPage }) => {
+test('given the logout dialog, when the user cancels, then they stay logged in with the list unchanged', async ({
+  annaPage,
+}) => {
   await createItem(anna, 'Milch');
   await annaPage.reload();
   await expect(row(annaPage, 'Milch')).toBeVisible();
@@ -48,7 +64,9 @@ test('given the logout dialog, when the user cancels, then they stay logged in w
   await expect(menuButton(annaPage)).toBeVisible();
 });
 
-test('given a pending offline change, when logging out, then the dialog warns that it will be lost', async ({ annaPage }) => {
+test('given a pending offline change, when logging out, then the dialog warns that it will be lost', async ({
+  annaPage,
+}) => {
   await waitForServiceWorker(annaPage);
   await goOffline(annaPage);
   await annaPage.getByLabel('Neuer Eintrag').fill('Eier');

@@ -1,8 +1,8 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSync } from '../../pb_public/js/sync.js';
+import { test } from 'node:test';
 import { createOutbox } from '../../pb_public/js/outbox.js';
 import { createStore } from '../../pb_public/js/storage.js';
+import { createSync } from '../../pb_public/js/sync.js';
 import { MemoryStorage } from '../support/memory-storage.mjs';
 
 // Mimics the SDK's ClientResponseError, which carries the HTTP status and
@@ -28,7 +28,14 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
         calls.push(['create', data.id]);
         fail(`create:${data.id}`);
         if (server.has(data.id)) throw httpError(400);
-        const record = { checked: false, checkedAt: '', created: '2026-10-17 10:00:00.000Z', createdBy: 'anna', updatedBy: 'anna', ...data };
+        const record = {
+          checked: false,
+          checkedAt: '',
+          created: '2026-10-17 10:00:00.000Z',
+          createdBy: 'anna',
+          updatedBy: 'anna',
+          ...data,
+        };
         server.set(data.id, record);
         return record;
       },
@@ -105,8 +112,14 @@ test('given a network error, when flushing, then it stops, keeps the remaining c
   outbox.add({ type: 'create', id: 'c', text: 'C' });
 
   assert.equal(await sync.flush(), 'offline');
-  assert.deepEqual(outbox.list().map((op) => op.id), ['b', 'c']);
-  assert.deepEqual(sentCalls(calls).map(([, id]) => id), ['a', 'b']);
+  assert.deepEqual(
+    outbox.list().map((op) => op.id),
+    ['b', 'c'],
+  );
+  assert.deepEqual(
+    sentCalls(calls).map(([, id]) => id),
+    ['a', 'b'],
+  );
   assert.equal(events.offline, 1);
   assert.ok(!calls.some(([name]) => name === 'listItems'), 'no reload while offline');
 });
@@ -117,7 +130,10 @@ test('given an expired session, when flushing, then it stops, keeps the changes 
   outbox.add({ type: 'create', id: 'b', text: 'B' });
 
   assert.equal(await sync.flush(), 'auth');
-  assert.deepEqual(outbox.list().map((op) => op.id), ['a', 'b']);
+  assert.deepEqual(
+    outbox.list().map((op) => op.id),
+    ['a', 'b'],
+  );
   assert.equal(events.auth, 1);
 });
 
@@ -149,20 +165,29 @@ test('given a create the server refuses, when flushing, then it is dropped with 
 
   assert.equal(await sync.flush(), 'done');
   assert.deepEqual(outbox.list(), []);
-  assert.deepEqual(events.rejected.map((op) => op.id), ['bad']);
+  assert.deepEqual(
+    events.rejected.map((op) => op.id),
+    ['bad'],
+  );
   assert.equal(server.has('ok'), true);
 });
 
 test('given another client error, when flushing, then the change is dropped with a notice and the rest is sent', async () => {
   const { sync, outbox, server, events } = setup({
-    items: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }],
+    items: [
+      { id: 'a', text: 'A' },
+      { id: 'b', text: 'B' },
+    ],
     failures: { 'update:a': httpError(422) },
   });
   outbox.add({ type: 'setChecked', id: 'a', checked: true });
   outbox.add({ type: 'setChecked', id: 'b', checked: true });
 
   assert.equal(await sync.flush(), 'done');
-  assert.deepEqual(events.rejected.map((op) => op.id), ['a']);
+  assert.deepEqual(
+    events.rejected.map((op) => op.id),
+    ['a'],
+  );
   assert.equal(server.get('b').checked, true);
 });
 
@@ -190,14 +215,20 @@ test('given a text change of an item deleted on the server, when flushing, then 
 
 test('given a text change the server refuses, when flushing, then it is dropped with a notice and the rest is sent', async () => {
   const { sync, outbox, server, events } = setup({
-    items: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }],
+    items: [
+      { id: 'a', text: 'A' },
+      { id: 'b', text: 'B' },
+    ],
     failures: { 'update:a': httpError(400) },
   });
   outbox.add({ type: 'setText', id: 'a', text: 'x'.repeat(201) });
   outbox.add({ type: 'setText', id: 'b', text: 'B2' });
 
   assert.equal(await sync.flush(), 'done');
-  assert.deepEqual(events.rejected.map((op) => op.id), ['a']);
+  assert.deepEqual(
+    events.rejected.map((op) => op.id),
+    ['a'],
+  );
   assert.equal(server.get('a').text, 'A');
   assert.equal(server.get('b').text, 'B2');
 });
@@ -246,7 +277,10 @@ test('given the server is busy, when flushing, then it stops and keeps the chang
   outbox.add({ type: 'create', id: 'a', text: 'A' });
 
   assert.equal(await sync.flush(), 'retry');
-  assert.deepEqual(outbox.list().map((op) => op.id), ['a']);
+  assert.deepEqual(
+    outbox.list().map((op) => op.id),
+    ['a'],
+  );
   assert.deepEqual(events.rejected, []);
 });
 
@@ -286,7 +320,10 @@ test('given realtime events, when applied, then the snapshot follows creates, up
   sync.applyEvent({ action: 'delete', record: { id: 'brot' } });
 
   const items = store.get('snapshot').items;
-  assert.deepEqual(items.map((i) => [i.id, i.checked]), [['milch', true]]);
+  assert.deepEqual(
+    items.map((i) => [i.id, i.checked]),
+    [['milch', true]],
+  );
 });
 
 test('given a realtime event during a reload, when the older reload result arrives, then the event is not lost', async () => {

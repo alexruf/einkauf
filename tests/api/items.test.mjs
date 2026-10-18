@@ -1,6 +1,6 @@
-import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, createUser, api } from '../support/server.mjs';
+import { after, before, test } from 'node:test';
+import { api, createUser, startServer } from '../support/server.mjs';
 
 let server;
 let anna;
@@ -77,7 +77,11 @@ test('given an item, when a family member changes its text to 201 characters, th
 
 test('given an item, when a family member checks it off, then it is checked', async () => {
   const item = (await createItem({ text: 'Butter' })).body;
-  const res = await api(server.url, `${ITEMS}/${item.id}`, { method: 'PATCH', token: anna.token, body: { checked: true } });
+  const res = await api(server.url, `${ITEMS}/${item.id}`, {
+    method: 'PATCH',
+    token: anna.token,
+    body: { checked: true },
+  });
   assert.equal(res.status, 200);
   assert.equal(res.body.checked, true);
 });

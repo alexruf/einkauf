@@ -92,14 +92,7 @@ const CLAIM_RETENTION_MS = 3 * 60 * 60 * 1000;
 // the number of released claims.
 function releaseExpiredClaims(app) {
   const cutoff = new Date(Date.now() - CLAIM_RETENTION_MS).toISOString().replace("T", " ");
-  const records = app.findRecordsByFilter(
-    "items",
-    "claimedAt != '' && claimedAt < {:cutoff}",
-    "",
-    0,
-    0,
-    { cutoff },
-  );
+  const records = app.findRecordsByFilter("items", "claimedAt != '' && claimedAt < {:cutoff}", "", 0, 0, { cutoff });
   for (const record of records) {
     record.set("claimedBy", "");
     record.set("claimedAt", "");

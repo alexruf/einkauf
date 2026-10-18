@@ -1,4 +1,4 @@
-import { test, expect, users, deleteAllItems, createItem, row, listItems } from '../support/e2e.mjs';
+import { createItem, deleteAllItems, expect, listItems, row, test, users } from '../support/e2e.mjs';
 
 const { anna } = users;
 
@@ -6,7 +6,10 @@ test.beforeEach(deleteAllItems);
 
 const deleteButton = (page, text) => row(page, text).getByRole('button', { name: 'Löschen' });
 
-test('given a checked-off item, when Anna deletes it, then it disappears for everyone without asking', async ({ annaPage, benPage }) => {
+test('given a checked-off item, when Anna deletes it, then it disappears for everyone without asking', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(anna, 'Milch');
   await row(annaPage, 'Milch').getByRole('checkbox').check();
   await expect(row(benPage, 'Milch').getByRole('checkbox')).toBeChecked();
@@ -19,7 +22,10 @@ test('given a checked-off item, when Anna deletes it, then it disappears for eve
   expect(await listItems()).toHaveLength(0);
 });
 
-test('given an open item, when Anna deletes it and confirms, then it disappears for everyone', async ({ annaPage, benPage }) => {
+test('given an open item, when Anna deletes it and confirms, then it disappears for everyone', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(anna, 'Brot');
   await annaPage.reload();
 

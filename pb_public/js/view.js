@@ -58,7 +58,8 @@ export function buildRows(snapshot, ops, me) {
     const editor = item.updatedBy ? nameOf(item.updatedBy) : creator;
     const claim = item.claimedBy ? (item.claimedBy === me ? 'mine' : 'other') : null;
     const claimant = claim && nameOf(item.claimedBy);
-    let meta = item.updatedBy && item.updatedBy !== item.createdBy ? `von ${creator} · zuletzt ${editor}` : `von ${creator}`;
+    let meta =
+      item.updatedBy && item.updatedBy !== item.createdBy ? `von ${creator} · zuletzt ${editor}` : `von ${creator}`;
     // While claimed, who gets the item matters more than who added it.
     if (claim === 'mine') meta = 'Du besorgst das';
     if (claim === 'other') meta = `${claimant} besorgt das`;

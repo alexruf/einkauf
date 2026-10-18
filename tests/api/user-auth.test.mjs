@@ -1,7 +1,7 @@
-import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, createUser, api, PASSWORD } from '../support/server.mjs';
+import { after, before, test } from 'node:test';
 import { connectRealtime } from '../support/realtime.mjs';
+import { api, createUser, PASSWORD, startServer } from '../support/server.mjs';
 
 let server;
 let anna;

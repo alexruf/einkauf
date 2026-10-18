@@ -1,9 +1,9 @@
 // Helpers for browser tests. The server and the users Anna, Ben and Carla
 // come from global setup.
 
-import { api, impersonate } from './server.mjs';
 import { test as base, expect } from './playwright.mjs';
 import { startProxy } from './proxy.mjs';
+import { api, impersonate } from './server.mjs';
 
 export const server = {
   get url() {

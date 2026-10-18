@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { VERSION } from '../../pb_public/js/version.js';
 
 test('given the app version, then it has the form YYYY.0M.0D.MICRO', () => {

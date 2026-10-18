@@ -1,4 +1,15 @@
-import { test, expect, users, deleteAllItems, createItem, row, listItems, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  listItems,
+  row,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
 
 const { anna, ben } = users;
 
@@ -18,7 +29,10 @@ async function save(page, text) {
   await expect(page.getByRole('dialog')).toBeHidden();
 }
 
-test('given an item, when Anna edits it, then everyone sees the new text with Anna as last editor', async ({ annaPage, benPage }) => {
+test('given an item, when Anna edits it, then everyone sees the new text with Anna as last editor', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(ben, 'Milch');
   await annaPage.reload();
 
@@ -56,7 +70,9 @@ test('given the edit dialog, when Anna cancels, then the text stays', async ({ a
   expect((await listItems()).map((i) => i.text)).toEqual(['Butter']);
 });
 
-test('given the edit dialog, when Anna saves an empty or unchanged text, then nothing changes', async ({ annaPage }) => {
+test('given the edit dialog, when Anna saves an empty or unchanged text, then nothing changes', async ({
+  annaPage,
+}) => {
   await createItem(ben, 'Käse');
   await annaPage.reload();
 
@@ -84,7 +100,9 @@ test('given the edit dialog, when Anna presses Enter, then the text is saved', a
   await expect.poll(async () => (await listItems()).map((i) => i.text)).toEqual(['Eier 10x']);
 });
 
-test('given an open item, when Anna taps its text, then it is checked off and no dialog opens', async ({ annaPage }) => {
+test('given an open item, when Anna taps its text, then it is checked off and no dialog opens', async ({
+  annaPage,
+}) => {
   await createItem(anna, 'Salz');
   await annaPage.reload();
 
@@ -94,7 +112,10 @@ test('given an open item, when Anna taps its text, then it is checked off and no
   await expect(annaPage.getByRole('dialog')).toBeHidden();
 });
 
-test('given Anna is offline, when she edits an item, then it shows as not synchronized and syncs when she reconnects', async ({ annaPage, benPage }) => {
+test('given Anna is offline, when she edits an item, then it shows as not synchronized and syncs when she reconnects', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(ben, 'Mehl');
   await annaPage.reload();
   await expect(row(annaPage, 'Mehl')).toBeVisible();

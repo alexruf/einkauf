@@ -1,5 +1,5 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { createAppName } from '../../pb_public/js/app-name.js';
 import { createStore } from '../../pb_public/js/storage.js';
 import { MemoryStorage } from '../support/memory-storage.mjs';

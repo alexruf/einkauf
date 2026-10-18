@@ -1,7 +1,7 @@
-import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, createUser, api } from '../support/server.mjs';
+import { after, before, test } from 'node:test';
 import { connectRealtime } from '../support/realtime.mjs';
+import { api, createUser, startServer } from '../support/server.mjs';
 
 let server;
 let anna;
@@ -109,7 +109,11 @@ test('given a subscriber, when the cleanup releases a claim, then the subscriber
     await client.subscribe(['items'], anna.token);
     assert.equal((await cleanup(server.superuserToken)).status, 200);
     await client.waitFor(
-      (e) => e.name === 'items' && e.data.action === 'update' && e.data.record?.id === item.id && e.data.record.claimedBy === '',
+      (e) =>
+        e.name === 'items' &&
+        e.data.action === 'update' &&
+        e.data.record?.id === item.id &&
+        e.data.record.claimedBy === '',
     );
   } finally {
     client.close();

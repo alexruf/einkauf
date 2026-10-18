@@ -1,4 +1,4 @@
-import { startServer, createUser, api } from './server.mjs';
+import { api, createUser, startServer } from './server.mjs';
 
 // One server for the whole browser test run. The tests reach it and the
 // test users through the environment, which Playwright passes on to workers.

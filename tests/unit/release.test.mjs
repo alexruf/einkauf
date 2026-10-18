@@ -1,9 +1,9 @@
-import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { test } from 'node:test';
 
 const ROOT = new URL('../..', import.meta.url).pathname;
 const SCRIPT = join(ROOT, 'scripts/release.sh');
@@ -94,7 +94,7 @@ test('given a release earlier the same day, when releasing again, then the count
   assert.equal(versionIn(work), '2026.10.19.1');
 });
 
-test('given the version file already holds today\'s version without a tag, when releasing, then the counter goes above it', () => {
+test("given the version file already holds today's version without a tag, when releasing, then the counter goes above it", () => {
   const { work } = setup({ version: '2026.10.18.0' });
   releaseOk(work, '2026.10.18');
   assert.equal(versionIn(work), '2026.10.18.1');

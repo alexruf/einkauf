@@ -1,4 +1,4 @@
-import { test, expect, users, deleteAllItems, row, logOut } from '../support/e2e.mjs';
+import { deleteAllItems, expect, logOut, row, test, users } from '../support/e2e.mjs';
 
 const { anna } = users;
 

@@ -1,4 +1,15 @@
-import { test, expect, users, deleteAllItems, createItem, row, listItems, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  listItems,
+  row,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
 
 const { anna, ben } = users;
 
@@ -7,7 +18,10 @@ test.beforeEach(deleteAllItems);
 // The button's name says what a tap does, so it changes with the state.
 const claimButton = (page, text) => row(page, text).locator('button.claim');
 
-test('given an open item, when Anna claims it, then she sees her claim and Ben sees it as hers', async ({ annaPage, benPage }) => {
+test('given an open item, when Anna claims it, then she sees her claim and Ben sees it as hers', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(ben, 'Milch');
   await annaPage.reload();
   await benPage.reload();
@@ -25,7 +39,10 @@ test('given an open item, when Anna claims it, then she sees her claim and Ben s
   await expect.poll(async () => (await listItems())[0].claimedBy).toBe(anna.id);
 });
 
-test('given Anna claimed an item, when Ben taps it twice, then he first removes her claim and then claims it', async ({ annaPage, benPage }) => {
+test('given Anna claimed an item, when Ben taps it twice, then he first removes her claim and then claims it', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(anna, 'Brot');
   await annaPage.reload();
   await benPage.reload();
@@ -42,7 +59,9 @@ test('given Anna claimed an item, when Ben taps it twice, then he first removes 
   await expect(row(annaPage, 'Brot').locator('.meta')).toHaveText('Ben besorgt das', { timeout: 5000 });
 });
 
-test('given a claimed item, when it is checked off, then the claim is gone and the row has no claim button', async ({ annaPage }) => {
+test('given a claimed item, when it is checked off, then the claim is gone and the row has no claim button', async ({
+  annaPage,
+}) => {
   await createItem(anna, 'Käse');
   await annaPage.reload();
   await claimButton(annaPage, 'Käse').click();
@@ -55,7 +74,10 @@ test('given a claimed item, when it is checked off, then the claim is gone and t
   await expect.poll(async () => (await listItems()).map((i) => [i.checked, i.claimedBy])).toEqual([[true, '']]);
 });
 
-test('given Anna is offline, when she claims an item, then it shows as not synchronized and Ben sees it after she reconnects', async ({ annaPage, benPage }) => {
+test('given Anna is offline, when she claims an item, then it shows as not synchronized and Ben sees it after she reconnects', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(ben, 'Mehl');
   await annaPage.reload();
   await benPage.reload();
@@ -76,7 +98,10 @@ test('given Anna is offline, when she claims an item, then it shows as not synch
   await expect(annaPage.locator('.item.is-pending')).toHaveCount(0, { timeout: 10000 });
 });
 
-test('given Anna claimed an item, when she taps the hand again, then her claim is removed', async ({ annaPage, benPage }) => {
+test('given Anna claimed an item, when she taps the hand again, then her claim is removed', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(ben, 'Senf');
   await annaPage.reload();
   await benPage.reload();

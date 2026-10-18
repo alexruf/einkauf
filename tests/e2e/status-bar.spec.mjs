@@ -1,5 +1,16 @@
-import { test, expect, users, deleteAllItems, createItem, openAs, row, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
 import { VERSION } from '../../pb_public/js/version.js';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  openAs,
+  row,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
 
 const { anna } = users;
 
@@ -27,7 +38,9 @@ test('given a logged-in user online, then both indicators are green and the vers
   await expect(footer(annaPage)).toContainText(VERSION);
 });
 
-test('given the connection is lost, then the indicators show offline and the last sync time while the offline notice stays', async ({ annaPage }) => {
+test('given the connection is lost, then the indicators show offline and the last sync time while the offline notice stays', async ({
+  annaPage,
+}) => {
   await createItem(anna, 'Milch');
   await annaPage.reload();
   await expect(row(annaPage, 'Milch')).toBeVisible();
@@ -59,16 +72,23 @@ test.describe('on a 360 px wide phone', () => {
   ];
 
   for (const [connectionText, syncText] of longest) {
-    test(`given "${connectionText}" and "${syncText}", then the status bar shows both in full on one line`, async ({ page }) => {
+    test(`given "${connectionText}" and "${syncText}", then the status bar shows both in full on one line`, async ({
+      page,
+    }) => {
       await openAs(page, anna);
       await expect(connection(page)).toHaveText('Verbunden');
-      await page.evaluate(([c, s]) => {
-        document.querySelector('#connection-indicator .indicator-text').textContent = c;
-        document.querySelector('#sync-indicator .indicator-text').textContent = s;
-      }, [connectionText, syncText]);
+      await page.evaluate(
+        ([c, s]) => {
+          document.querySelector('#connection-indicator .indicator-text').textContent = c;
+          document.querySelector('#sync-indicator .indicator-text').textContent = s;
+        },
+        [connectionText, syncText],
+      );
 
       const layout = await page.evaluate(() => {
-        const items = [...document.querySelectorAll('.footer-inner > :not([hidden])')].map((el) => el.getBoundingClientRect());
+        const items = [...document.querySelectorAll('.footer-inner > :not([hidden])')].map((el) =>
+          el.getBoundingClientRect(),
+        );
         const texts = [...document.querySelectorAll('.footer .indicator-text')];
         return {
           // On one line, the vertically centered items share their middle.

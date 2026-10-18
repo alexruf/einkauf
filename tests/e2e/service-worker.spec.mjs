@@ -1,14 +1,26 @@
 import { cp, mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { test, expect, users, deleteAllItems, createItem, row, waitForServiceWorker, goOffline, goOnline } from '../support/e2e.mjs';
-import { PUBLIC_DIR, startServer, createUser } from '../support/server.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  row,
+  test,
+  users,
+  waitForServiceWorker,
+} from '../support/e2e.mjs';
+import { createUser, PUBLIC_DIR, startServer } from '../support/server.mjs';
 
 const { anna } = users;
 
 test.beforeEach(deleteAllItems);
 
-test('given the list was opened online, when the app is opened offline, then it shows the last known list and the offline hint', async ({ annaPage }) => {
+test('given the list was opened online, when the app is opened offline, then it shows the last known list and the offline hint', async ({
+  annaPage,
+}) => {
   await createItem(anna, 'Milch');
   await annaPage.reload();
   await expect(row(annaPage, 'Milch')).toBeVisible();
@@ -22,7 +34,12 @@ test('given the list was opened online, when the app is opened offline, then it 
 
   // The offline emulation also cuts the Service Worker's own requests: a file
   // that is not cached fails instead of reaching the server.
-  const reachedServer = await annaPage.evaluate(() => fetch('/not-cached.js').then(() => true, () => false));
+  const reachedServer = await annaPage.evaluate(() =>
+    fetch('/not-cached.js').then(
+      () => true,
+      () => false,
+    ),
+  );
   expect(reachedServer).toBe(false);
   await goOnline(annaPage);
 });

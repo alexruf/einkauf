@@ -25,7 +25,10 @@ export function createOutbox(store, { now = () => new Date().toISOString(), make
     },
 
     remove(entry) {
-      store.set('outbox', list().filter((op) => op.opId !== entry.opId));
+      store.set(
+        'outbox',
+        list().filter((op) => op.opId !== entry.opId),
+      );
     },
   };
 }
