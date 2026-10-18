@@ -523,6 +523,8 @@ function requestLogout() {
     { once: true },
   );
   dialog.showModal();
+  // Focus the sheet rather than its first button, so neither choice looks preselected.
+  dialog.focus();
 }
 
 function logout() {

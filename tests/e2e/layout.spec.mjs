@@ -104,6 +104,12 @@ test.describe('on a 390 px wide phone', () => {
     expect(box.width).toBeGreaterThanOrEqual(389);
     expect(Math.abs(box.y + box.height - 844)).toBeLessThanOrEqual(1);
   });
+
+  test('given the logout confirmation, then no button starts out focused', async ({ page }) => {
+    await openAs(page, anna);
+    const dialog = await askToLogOut(page);
+    await expect(dialog).toBeFocused();
+  });
 });
 
 test.describe('in a desktop browser', () => {

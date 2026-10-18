@@ -843,6 +843,12 @@ main {
   box-shadow: var(--shadow-float);
 }
 
+/* The dialog itself takes the initial focus; an outline would only frame
+   the whole sheet. */
+.confirm:focus-visible {
+  outline: none;
+}
+
 .confirm::backdrop {
   background: rgb(0 0 0 / 0.4);
 }
