@@ -3,6 +3,15 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.18.4 (2026-10-18)
+
+### Features
+
+- **web-app:** Redesign list for one-handed use and legibility
+
+### Bug Fixes
+
+- **web-app:** Start offline after only the first visit
 ## 2026.10.18.3 (2026-10-18)
 
 ### Features
