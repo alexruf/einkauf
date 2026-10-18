@@ -3,13 +3,15 @@
 
 import PocketBase from '/vendor/pocketbase.es.mjs';
 import { createAppName } from './app-name.js';
+import { createHold } from './hold.js';
 import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
+import { createPrefs } from './prefs.js';
 import { createStore } from './storage.js';
 import { createSync } from './sync.js';
 import { createUpdater, parseVersion } from './update.js';
 import { VERSION } from './version.js';
-import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from './view.js';
+import { buildRows, connectionIndicator, layoutKey, logoutQuestion, syncIndicator } from './view.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,6 +22,7 @@ pb.autoCancellation(false);
 
 const appName = createAppName(localStorage);
 const store = createStore(localStorage);
+const prefs = createPrefs(localStorage);
 const outbox = createOutbox(store);
 const sync = createSync({
   pb,
@@ -31,6 +34,18 @@ const sync = createSync({
   onRejected: () => showNotice('Eine Änderung wurde vom Server abgelehnt und verworfen.'),
 });
 const updater = createUpdater({ running: VERSION, backend: sessionStorage });
+// Rows the user just checked off or un-checked stay in place for a moment.
+const hold = createHold({
+  setTimeout,
+  clearTimeout,
+  onRelease: () => {
+    strikes.clear();
+    render();
+  },
+});
+// When the user checked off each held row, so its strike-through is drawn
+// once and continues smoothly when the row is re-rendered meanwhile.
+const strikes = new Map();
 
 // 'connecting' until the realtime connection is established or a request
 // fails. Deleting is only offered while 'online'.
@@ -62,6 +77,8 @@ async function loadAppName() {
 
 function showLogin(hint = '') {
   closeAccountMenu();
+  if (editing) closeEdit();
+  lastLayout = null;
   $('list-screen').hidden = true;
   $('account').hidden = true;
   $('login-screen').hidden = false;
@@ -69,6 +86,8 @@ function showLogin(hint = '') {
   $('login-hint').hidden = !hint;
   $('login-error').hidden = true;
   $('items').replaceChildren();
+  $('done-items').replaceChildren();
+  $('done').hidden = true;
   renderStatus();
 }
 
@@ -118,11 +137,11 @@ function renderStatus() {
   const text = notice || (loggedIn && connection === 'offline' ? 'Offline – Änderungen werden später übertragen.' : '');
   $('status').textContent = text;
   $('status').hidden = !text;
-  renderIndicator($('connection-indicator'), loggedIn && connectionIndicator(connection));
+  const pending = outbox.list().length;
+  renderIndicator($('connection-indicator'), loggedIn && connectionIndicator({ connection, pending }));
   renderIndicator(
     $('sync-indicator'),
-    loggedIn &&
-      syncIndicator({ connection, pending: outbox.list().length, lastSync: store.get('lastSync'), now: new Date() }),
+    loggedIn && syncIndicator({ connection, pending, lastSync: store.get('lastSync'), now: new Date() }),
   );
 }
 
@@ -136,55 +155,181 @@ function renderIndicator(element, indicator) {
 
 // List
 
+// The layout of the last render, so the next one knows whether rows move.
+let lastLayout = null;
+
 function render() {
   renderStatus();
   const user = currentUser();
   if (!user || $('list-screen').hidden) return;
 
+  const layout = layoutKey(currentRows(user), prefs.doneOpen());
+  const moves = lastLayout !== null && layout !== lastLayout;
+  lastLayout = layout;
+  // Rows that move slide to their new place, so users see where an item
+  // went. The page ignores input while a transition runs, so only renders
+  // that move rows are animated.
+  if (moves && canAnimate()) document.startViewTransition(renderList);
+  else renderList();
+}
+
+const currentRows = (user) => buildRows(store.get('snapshot'), outbox.list(), user.id, hold.keys());
+
+const canAnimate = () =>
+  typeof document.startViewTransition === 'function' &&
+  !matchMedia('(prefers-reduced-motion: reduce)').matches &&
+  document.visibilityState === 'visible';
+
+// Draws the list from the current state. An animated render calls it a
+// moment later, so it reads everything afresh.
+function renderList() {
+  const user = currentUser();
+  if (!user || $('list-screen').hidden) return;
+
   const focusedId = document.activeElement?.closest?.('.item')?.dataset.id;
   const focusedClass = document.activeElement?.className;
+  rememberEditField();
 
-  const rows = buildRows(store.get('snapshot'), outbox.list(), user.id);
-  const template = $('item-template').content;
-  const elements = rows.map((row) => {
-    const li = template.firstElementChild.cloneNode(true);
-    li.dataset.id = row.id;
-    li.classList.toggle('is-checked', row.checked);
-    li.classList.toggle('is-pending', row.pending);
-    if (row.claim) li.dataset.claim = row.claim;
-    // Item text is user input: only ever set it as text, never as HTML.
-    li.querySelector('.text').textContent = row.text;
-    li.querySelector('.meta').textContent = row.meta;
-    const checkbox = li.querySelector('input');
-    checkbox.checked = row.checked;
-    checkbox.addEventListener('change', () => setChecked(row.id, checkbox.checked));
-    const del = li.querySelector('.delete');
-    del.disabled = connection !== 'online' || row.pending;
-    del.title = connection === 'online' ? 'Löschen' : 'Löschen ist nur online möglich';
-    del.addEventListener('click', () => requestDelete(row));
-    li.querySelector('.edit').addEventListener('click', () => requestEdit(row));
-    const claim = li.querySelector('.claim');
-    claim.hidden = row.checked;
-    const claimLabel = claimButtonLabel(row);
-    claim.setAttribute('aria-label', claimLabel);
-    claim.title = claimLabel;
-    // A tap removes any claim, whoever made it, and claims an unclaimed item.
-    claim.addEventListener('click', () => setClaimed(row.id, !row.claim));
-    return li;
-  });
-  $('items').replaceChildren(...elements);
-  $('empty').hidden = rows.length > 0;
-
+  const rows = currentRows(user);
   // An item deleted by someone else cannot be edited any more.
-  const editDialog = $('edit-item');
-  if (editDialog.open && !rows.some((row) => row.id === editDialog.dataset.id)) editDialog.close();
+  if (editing && !rows.some((row) => row.id === editing.id)) closeEdit();
+  const toElement = (row) => (editing?.id === row.id ? editRowElement(row) : rowElement(row));
+  const open = rows.filter((row) => row.section === 'open');
+  const done = rows.filter((row) => row.section === 'done');
+  $('items').replaceChildren(...open.map(toElement));
+  $('done-items').replaceChildren(...done.map(toElement));
+  $('empty').hidden = open.length > 0;
+  $('done').hidden = done.length === 0;
+  $('done-label').textContent = `Erledigt (${done.length})`;
+  const doneOpen = prefs.doneOpen();
+  $('done-toggle').setAttribute('aria-expanded', String(doneOpen));
+  $('done-items').hidden = !doneOpen;
 
   // Re-rendering replaces the rows; keep keyboard focus where it was.
-  if (focusedId) {
-    const li = $('items').querySelector(`[data-id="${CSS.escape(focusedId)}"]`);
-    const target = li?.querySelector(['claim', 'edit', 'delete'].includes(focusedClass) ? `.${focusedClass}` : 'input');
+  if (editing?.focused) restoreEditField();
+  else if (focusedId) {
+    const li = document.querySelector(`.items [data-id="${CSS.escape(focusedId)}"]`);
+    const target = li?.querySelector(['claim', 'more'].includes(focusedClass) ? `.${focusedClass}` : 'input');
     target?.focus();
   }
+}
+
+function rowElement(row) {
+  const li = $('item-template').content.firstElementChild.cloneNode(true);
+  li.dataset.id = row.id;
+  // Pairs the row before and after an animated render. Set through the
+  // style object, which the CSP allows, unlike a style attribute.
+  li.style.viewTransitionName = `item-${row.id}`;
+  li.classList.toggle('is-checked', row.checked);
+  li.classList.toggle('is-pending', row.pending);
+  if (row.claim) li.dataset.claim = row.claim;
+  // Item text is user input: only ever set it as text, never as HTML.
+  const text = li.querySelector('.text');
+  text.textContent = row.text;
+  if (row.checked && strikes.has(row.id)) {
+    li.classList.add('is-striking');
+    text.style.animationDelay = `${strikes.get(row.id) - performance.now()}ms`;
+  }
+  li.querySelector('.meta').textContent = row.meta;
+  const checkbox = li.querySelector('input');
+  checkbox.checked = row.checked;
+  checkbox.addEventListener('change', () => setChecked(row, checkbox.checked));
+  li.querySelector('.more').addEventListener('click', () => openEdit(row));
+  const claim = li.querySelector('.claim');
+  claim.hidden = row.checked;
+  const claimLabel = claimButtonLabel(row);
+  claim.setAttribute('aria-label', claimLabel);
+  claim.title = claimLabel;
+  // A tap removes any claim, whoever made it, and claims an unclaimed item.
+  claim.addEventListener('click', () => setClaimed(row.id, !row.claim));
+  return li;
+}
+
+// Edit mode
+
+// The row in edit mode, or null. `draft` and `selection` survive re-renders,
+// so typing is not interrupted when the list changes meanwhile.
+let editing = null;
+
+function editRowElement(row) {
+  const li = $('edit-template').content.firstElementChild.cloneNode(true);
+  li.dataset.id = row.id;
+  li.style.viewTransitionName = `item-${row.id}`;
+  const field = li.querySelector('.edit-text');
+  field.value = editing.draft;
+  // The sticky add field covers the top of the list; scroll-margin-top keeps
+  // the row below it.
+  field.addEventListener('focus', () => li.scrollIntoView({ block: 'nearest' }));
+  li.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') cancelEdit();
+  });
+  li.querySelector('.edit-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    saveEdit(field.value);
+  });
+  li.querySelector('.edit-cancel').addEventListener('click', cancelEdit);
+  const del = li.querySelector('.edit-delete');
+  // An item that has not reached the server yet cannot be deleted there.
+  del.disabled = connection !== 'online' || row.pending;
+  li.querySelector('.edit-hint').hidden = connection === 'online';
+  del.addEventListener('click', () => {
+    const { id } = editing;
+    closeEdit();
+    render();
+    deleteItem(id);
+  });
+  return li;
+}
+
+function openEdit(row) {
+  if (editing) closeEdit();
+  // The field takes focus with the cursor after the text, so the user can
+  // type right away. iOS only opens the keyboard for focus set during the
+  // tap, which holds because opening never starts an animated render.
+  const end = row.text.length;
+  editing = { id: row.id, draft: row.text, selection: [end, end], focused: true };
+  // The row keeps its place while it is edited, even if someone else checks
+  // it off meanwhile.
+  hold.pin(row.id, { checked: row.checked, checkedAt: row.checkedAt });
+  render();
+}
+
+function closeEdit() {
+  hold.unpin(editing.id);
+  editing = null;
+}
+
+function cancelEdit() {
+  const { id } = editing;
+  closeEdit();
+  render();
+  document.querySelector(`.items [data-id="${CSS.escape(id)}"] .more`)?.focus();
+  reloadIfIdle();
+}
+
+function saveEdit(value) {
+  const { id } = editing;
+  closeEdit();
+  setText(id, value);
+  render();
+  document.querySelector(`.items [data-id="${CSS.escape(id)}"] .more`)?.focus();
+  reloadIfIdle();
+}
+
+function rememberEditField() {
+  const field = document.querySelector('.edit-text');
+  // The field on screen may still belong to a row that was just closed.
+  if (!editing || field?.closest('.item').dataset.id !== editing.id) return;
+  editing.draft = field.value;
+  editing.selection = [field.selectionStart, field.selectionEnd];
+  editing.focused = document.activeElement === field;
+}
+
+function restoreEditField() {
+  const field = document.querySelector('.edit-text');
+  if (!field) return;
+  field.focus({ preventScroll: true });
+  field.setSelectionRange(...editing.selection);
 }
 
 function addItem(text) {
@@ -193,8 +338,11 @@ function addItem(text) {
   flush();
 }
 
-function setChecked(id, checked) {
-  outbox.add({ type: 'setChecked', id, checked });
+function setChecked(row, checked) {
+  hold.toggle(row.id, { checked: row.checked, checkedAt: row.checkedAt });
+  if (checked) strikes.set(row.id, performance.now());
+  else strikes.delete(row.id);
+  outbox.add({ type: 'setChecked', id: row.id, checked });
   render();
   flush();
 }
@@ -212,23 +360,7 @@ function claimButtonLabel(row) {
   return 'Besorge ich';
 }
 
-function requestEdit(row) {
-  const dialog = $('edit-item');
-  const input = $('edit-text');
-  input.value = row.text;
-  dialog.dataset.id = row.id;
-  dialog.returnValue = '';
-  dialog.addEventListener(
-    'close',
-    () => {
-      if (dialog.returnValue === 'save') setText(row.id, input.value);
-    },
-    { once: true },
-  );
-  dialog.showModal();
-}
-
-// Compares with the item as shown now, not when the dialog opened, so that
+// Compares with the item as shown now, not when editing started, so that
 // saving an unchanged text does not make the user the last editor.
 function setText(id, value) {
   const text = value.trim();
@@ -237,24 +369,6 @@ function setText(id, value) {
   outbox.add({ type: 'setText', id, text });
   render();
   flush();
-}
-
-function requestDelete(row) {
-  if (row.checked) {
-    deleteItem(row.id);
-    return;
-  }
-  const dialog = $('confirm-delete');
-  $('confirm-text').textContent = row.text;
-  dialog.returnValue = '';
-  dialog.addEventListener(
-    'close',
-    () => {
-      if (dialog.returnValue === 'delete') deleteItem(row.id);
-    },
-    { once: true },
-  );
-  dialog.showModal();
 }
 
 // Deleting does not go through the outbox, so a reload while a delete
@@ -351,7 +465,10 @@ async function checkVersion() {
 // would be lost, so the reload waits for it.
 function reloadIfIdle() {
   const busy =
-    $('new-item').value.trim() !== '' || document.querySelector('dialog[open]') !== null || runningDeletes > 0;
+    $('new-item').value.trim() !== '' ||
+    editing !== null ||
+    document.querySelector('dialog[open]') !== null ||
+    runningDeletes > 0;
   if (updater.takeReload(busy)) location.reload();
 }
 
@@ -455,9 +572,13 @@ $('add-form').addEventListener('submit', (event) => {
 });
 
 $('logout').addEventListener('click', requestLogout);
-$('edit-cancel').addEventListener('click', () => $('edit-item').close());
-// These listeners run before the dialog's own close handler, which may start
-// a delete. Waiting a tick lets that delete count as running.
+$('done-toggle').style.viewTransitionName = 'done-toggle';
+$('done-toggle').addEventListener('click', () => {
+  prefs.setDoneOpen(!prefs.doneOpen());
+  render();
+});
+// These listeners run before the dialog's own close handler; waiting a tick
+// lets that handler finish first.
 for (const dialog of document.querySelectorAll('dialog')) {
   dialog.addEventListener('close', () => setTimeout(reloadIfIdle, 0));
 }

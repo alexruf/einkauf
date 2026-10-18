@@ -1,4 +1,4 @@
-import { deleteAllItems, expect, logOut, row, test, users } from '../support/e2e.mjs';
+import { deleteAllItems, deleteInApp, expect, logOut, row, test, users } from '../support/e2e.mjs';
 
 const { anna } = users;
 
@@ -24,8 +24,7 @@ test('given the content security policy, when using the app, then no violation i
   await page.keyboard.press('Enter');
   await row(page, 'Milch').getByRole('checkbox').check();
   await row(page, 'Milch').getByRole('checkbox').uncheck();
-  await row(page, 'Milch').getByRole('button', { name: 'Löschen' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Löschen' }).click();
+  await deleteInApp(page, 'Milch');
   await expect(row(page, 'Milch')).toHaveCount(0);
   await logOut(page);
 

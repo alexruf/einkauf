@@ -1,11 +1,30 @@
+/* The values of the "Einkaufszettel" design; docs/design.md explains the
+   rules behind them. Neutrals lean slightly towards the brand green. */
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/vendor/atkinson-hyperlegible-next.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+    U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   color-scheme: light dark;
-  --bg: #f6f5f2;
+  /* Page behind the list. */
+  --bg: #f1f4f1;
+  /* Fields, buttons and sheets. */
   --surface: #ffffff;
+  /* Layers above the page: menu and sheets. */
   --raised: #ffffff;
-  --text: #1d1d1b;
-  --muted: #6b6a66;
-  --line: #e3e1db;
+  --text: #16201a;
+  /* Meta line and checked-off items; at least 4.5:1 on --bg. */
+  --muted: #5c6860;
+  --line: #dce3dd;
+  /* Checking off and the primary button; also the app icon's green. */
   --accent: #2f7d4f;
   --accent-text: #ffffff;
   --danger: #b3261e;
@@ -13,26 +32,47 @@
   --notice: #fff4d6;
   --notice-text: #5c4300;
   /* Claimed items; blue, because the app uses no blue for anything else. */
-  --claim: #2f6fb3;
+  --claim: #2c66b8;
+  --claim-other: 8%;
+  --claim-mine: 15%;
+  /* The check mark of a checked checkbox, in --accent-text. */
+  --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  /* Only layers that float above the page cast a shadow. */
+  --shadow-float: 0 0.75rem 2rem rgb(22 32 26 / 0.18);
+
+  /* Radius by role: controls, sheets and cards, the checkbox. */
   --radius: 0.75rem;
+  --radius-sheet: 1.25rem;
+  --radius-box: 0.5rem;
   --tap: 2.75rem;
+
+  --font: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --size-title: 1.75rem;
+  --size-item: 1.0625rem;
+  --size-label: 0.9375rem;
+  --size-meta: 0.875rem;
+  --size-small: 0.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #151614;
-    --surface: #1f201d;
-    --raised: #2a2b27;
-    --text: #ecebe6;
-    --muted: #9a9993;
-    --line: #33342f;
-    --accent: #5dbb83;
-    --accent-text: #0d1f14;
+    --bg: #151a17;
+    --surface: #1e2420;
+    --raised: #242b26;
+    --text: #e6ece8;
+    --muted: #9aa59e;
+    --line: #2b332e;
+    --accent: #6fc191;
+    --accent-text: #0e2417;
     --danger: #f2948c;
     --warn: #e5b85c;
     --notice: #3a3014;
     --notice-text: #f3dc9a;
-    --claim: #6fa8e6;
+    --claim: #7faeea;
+    --claim-other: 14%;
+    --claim-mine: 24%;
+    --check-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%230e2417' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --shadow-float: 0 0.75rem 2rem rgb(0 0 0 / 0.5);
   }
 }
 
@@ -46,12 +86,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font:
-    1rem / 1.4 system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font: 1rem / 1.4 var(--font);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -130,8 +165,23 @@ main {
 }
 
 .bar h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
   margin: 0;
-  font-size: 1.375rem;
+  font-size: var(--size-title);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+/* The app icon gives the list screen a recognizable start. */
+.app-icon {
+  flex: none;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: var(--radius-box);
 }
 
 .account {
@@ -181,10 +231,10 @@ main {
   margin: 0;
   padding: 0.375rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sheet);
   background: var(--raised);
   color: var(--text);
-  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-float);
 }
 
 /* Dims the page while the menu is open, so what it covers recedes. */
@@ -218,6 +268,10 @@ main {
   border: none;
   background: none;
   text-align: left;
+}
+
+.menu-item {
+  border-radius: var(--radius);
 }
 
 .menu-item:hover {
@@ -268,7 +322,7 @@ main {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--size-small);
 }
 
 .footer-inner {
@@ -362,8 +416,12 @@ main {
   margin-top: 2rem;
   padding: 1.25rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sheet);
   background: var(--surface);
+}
+
+.login button.primary {
+  width: 100%;
 }
 
 .login h2 {
@@ -391,7 +449,7 @@ main {
   margin-top: 1rem;
   padding: 0 1.25rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sheet);
   background: var(--surface);
 }
 
@@ -441,6 +499,25 @@ main {
 .add input {
   flex: 1;
   min-width: 0;
+  min-height: 3rem;
+}
+
+/* A square "+" leaves the field most of the width. */
+.add-button {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+}
+
+.add-button svg {
+  width: 1.375rem;
+  height: 1.375rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
 }
 
 /* List */
@@ -451,10 +528,24 @@ main {
   list-style: none;
 }
 
+/* Every row reaches half a gutter past the column, so a claimed row's stripe
+   and tint have room without moving the content. */
 .item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem 0;
+}
+
+/* The separator starts where the text starts, which keeps the list calm. */
+.item::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: calc(0.5rem + 1.625rem + 0.875rem);
   border-bottom: 1px solid var(--line);
 }
 
@@ -464,36 +555,60 @@ main {
   align-items: center;
   gap: 0.875rem;
   min-width: 0;
-  min-height: 3.25rem;
-  padding: 0.5rem 0;
+  min-height: 3.5rem;
+  padding: 0.5625rem 0;
   cursor: pointer;
 }
 
+/* Drawn by the app, so it looks the same everywhere; the native one is a
+   black square in iOS dark mode. */
 .toggle input {
   flex: none;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.625rem;
+  height: 1.625rem;
   margin: 0;
-  accent-color: var(--accent);
+  border: 2px solid color-mix(in srgb, var(--muted) 70%, transparent);
+  border-radius: var(--radius-box);
+  background: transparent center / 1.375rem no-repeat;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color 120ms,
+    border-color 120ms;
+}
+
+.toggle input:checked {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  background-image: var(--check-mark);
 }
 
 .body {
-  display: grid;
   min-width: 0;
 }
 
+/* Inline, so the strike-through line follows the text across line breaks.
+   The line is a background, because a text-decoration cannot be drawn. */
 .text {
   overflow-wrap: anywhere;
+  font-size: var(--size-item);
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 60% / 0 2px;
 }
 
 .meta,
 .pending {
+  display: block;
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: var(--size-meta);
 }
 
 .pending {
   font-style: italic;
+}
+
+.meta:empty {
+  display: none;
 }
 
 .item:not(.is-pending) .pending {
@@ -502,33 +617,48 @@ main {
 
 .item.is-checked .text {
   color: var(--muted);
-  text-decoration: line-through;
+  background-size: 100% 2px;
 }
 
-.item.is-checked .body {
-  opacity: 0.7;
+/* The one expressive moment: the line is drawn across the text, like
+   crossing an item off a paper list. */
+.item.is-striking .text {
+  animation: strike 260ms cubic-bezier(0.4, 0.1, 0.3, 1) both;
 }
 
-/* A claimed row gets a soft background; one's own claim a bit stronger, so
-   it stands out from someone else's. The padding and the negative margin
-   cancel out, so the content does not move when a row is claimed. */
+@keyframes strike {
+  from {
+    background-size: 0 2px;
+  }
+
+  to {
+    background-size: 100% 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item.is-striking .text {
+    animation: none;
+  }
+}
+
+/* A claimed row gets a stripe on its leading edge and a tint; one's own
+   claim a stronger tint, so it stands out from someone else's. */
 .item[data-claim] {
-  margin-inline: -0.5rem;
-  padding-inline: 0.5rem;
-  border-radius: 0.5rem;
-}
-
-.item[data-claim="other"] {
-  background: color-mix(in srgb, var(--claim) 9%, transparent);
+  background: color-mix(in srgb, var(--claim) var(--claim-other), transparent);
+  box-shadow: inset 0.25rem 0 0 var(--claim);
 }
 
 .item[data-claim="mine"] {
-  background: color-mix(in srgb, var(--claim) 18%, transparent);
+  background: color-mix(in srgb, var(--claim) var(--claim-mine), transparent);
+}
+
+.item[data-claim] .meta {
+  color: var(--text);
 }
 
 .claim,
-.edit,
-.delete {
+.more {
   flex: none;
   display: grid;
   place-items: center;
@@ -539,10 +669,25 @@ main {
 }
 
 .claim svg,
-.edit svg,
-.delete svg {
+.more svg {
   width: 1.25rem;
   height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The more button draws filled dots instead of strokes. */
+.more svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.edit-delete svg {
+  width: 1.375rem;
+  height: 1.375rem;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -559,10 +704,131 @@ main {
   fill: color-mix(in srgb, currentColor 35%, transparent);
 }
 
+/* Edit mode: the row turns into a field with its actions below. */
+.items > li {
+  /* Keeps a row scrolled into view clear of the sticky add field. */
+  scroll-margin-top: 5rem;
+}
+
+.item.is-editing {
+  display: block;
+  padding: 0.625rem 0.5rem 0.75rem;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.item.is-editing::after {
+  content: none;
+}
+
+.edit-text {
+  font-size: var(--size-item);
+}
+
+.edit-form {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.edit-delete {
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  margin-right: auto;
+  padding: 0;
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.edit-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--size-meta);
+}
+
 .empty {
-  margin-top: 2rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.625rem;
+  padding: 2.25rem 1rem 1.25rem;
   color: var(--muted);
   text-align: center;
+}
+
+.empty-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.empty p {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.empty strong {
+  color: var(--text);
+  font-size: 1.125rem;
+}
+
+/* The "Erledigt" section: a header that collapses the checked-off items. */
+.done {
+  margin-top: 0.625rem;
+}
+
+.done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: var(--size-label);
+  font-weight: 600;
+  text-align: left;
+}
+
+.chevron {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 160ms;
+}
+
+.done-toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+/* Moving rows slide to their new place (see render() in app.js). Short, as
+   the page takes no input while it runs. */
+::view-transition-group(*) {
+  animation-duration: 200ms;
+  animation-timing-function: cubic-bezier(0.3, 0.1, 0.2, 1);
 }
 
 /* Confirmation dialogs */
@@ -571,9 +837,10 @@ main {
   width: min(24rem, calc(100vw - 2rem));
   padding: 1.25rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border-radius: var(--radius-sheet);
+  background: var(--raised);
   color: var(--text);
+  box-shadow: var(--shadow-float);
 }
 
 .confirm::backdrop {
@@ -585,15 +852,21 @@ main {
   overflow-wrap: anywhere;
 }
 
-.edit-label {
-  display: grid;
-  gap: 0.375rem;
-  margin-bottom: 1rem;
-  font-weight: 600;
-}
-
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+/* On phones a dialog is a sheet at the bottom, within reach of the thumb.
+   No dialog takes text input, so the keyboard never covers one. */
+@media (max-width: 40rem) {
+  .confirm {
+    width: 100%;
+    max-width: none;
+    margin: auto 0 0;
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  }
 }

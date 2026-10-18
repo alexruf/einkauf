@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildRows, connectionIndicator, logoutQuestion, syncIndicator } from '../../pb_public/js/view.js';
+import { buildRows, connectionIndicator, layoutKey, logoutQuestion, syncIndicator } from '../../pb_public/js/view.js';
 
 const users = [
   { id: 'anna', name: 'Anna' },
@@ -38,6 +38,73 @@ test('given open and checked items, then open ones come first by creation, check
   ]);
 });
 
+test('given a held check-off, then the row keeps its open position and section but is shown checked', () => {
+  const snapshot = {
+    users,
+    items: [
+      item('Milch', { created: '2026-10-17 08:00:00.000Z' }),
+      item('Brot', { created: '2026-10-17 08:10:00.000Z' }),
+      item('Salz', { checked: true, checkedAt: '2026-10-17 07:00:00.000Z' }),
+    ],
+  };
+  const ops = [{ type: 'setChecked', id: 'Milch', checked: true, at: '2026-10-17T10:00:00.000Z' }];
+  const held = new Map([['Milch', { checked: false, checkedAt: 0 }]]);
+  const rows = buildRows(snapshot, ops, 'anna', held);
+  assert.deepEqual(texts(rows), ['Milch', 'Brot', 'Salz']);
+  assert.equal(rows[0].checked, true);
+  assert.equal(rows[0].section, 'open');
+  assert.equal(rows[2].section, 'done');
+});
+
+test('given a held un-check, then the row stays among the checked-off rows with its old checked time', () => {
+  const snapshot = {
+    users,
+    items: [
+      item('Brot'),
+      item('Milch', { checked: true, checkedAt: '2026-10-17 09:00:00.000Z' }),
+      item('Salz', { checked: true, checkedAt: '2026-10-17 08:00:00.000Z' }),
+    ],
+  };
+  const ops = [{ type: 'setChecked', id: 'Salz', checked: false, at: '2026-10-17T10:00:00.000Z' }];
+  const held = new Map([['Salz', { checked: true, checkedAt: Date.parse('2026-10-17T08:00:00.000Z') }]]);
+  const rows = buildRows(snapshot, ops, 'anna', held);
+  assert.deepEqual(texts(rows), ['Brot', 'Milch', 'Salz']);
+  assert.equal(rows[2].checked, false);
+  assert.equal(rows[2].section, 'done');
+});
+
+test('given nothing held, then each row is in the section of its own state', () => {
+  const snapshot = {
+    users,
+    items: [item('Milch'), item('Salz', { checked: true, checkedAt: '2026-10-17 08:00:00.000Z' })],
+  };
+  const rows = buildRows(snapshot, [], 'anna');
+  assert.deepEqual(
+    rows.map((r) => [r.text, r.section]),
+    [
+      ['Milch', 'open'],
+      ['Salz', 'done'],
+    ],
+  );
+});
+
+test('given the same rows with other states, then the layout key is the same', () => {
+  const snapshot = { users, items: [item('Milch'), item('Brot')] };
+  const before = buildRows(snapshot, [], 'anna');
+  const ops = [{ type: 'setText', id: 'Milch', text: 'Hafermilch', at: '2026-10-17T10:00:00.000Z' }];
+  assert.equal(layoutKey(buildRows(snapshot, ops, 'anna'), false), layoutKey(before, false));
+});
+
+test('given a row moved to another section, an added row or a toggled section, then the layout key changes', () => {
+  const snapshot = { users, items: [item('Milch'), item('Brot')] };
+  const before = layoutKey(buildRows(snapshot, [], 'anna'), false);
+  const checked = [{ type: 'setChecked', id: 'Milch', checked: true, at: '2026-10-17T10:00:00.000Z' }];
+  const added = [{ type: 'create', id: 'eier', text: 'Eier', at: '2026-10-17T10:00:00.000Z' }];
+  assert.notEqual(layoutKey(buildRows(snapshot, checked, 'anna'), false), before);
+  assert.notEqual(layoutKey(buildRows(snapshot, added, 'anna'), false), before);
+  assert.notEqual(layoutKey(buildRows(snapshot, [], 'anna'), true), before);
+});
+
 test('given a pending create, then it is shown as open, pending, by me, and sorted by the local time', () => {
   const snapshot = { users, items: [item('Milch', { created: '2026-10-17 08:00:00.000Z' })] };
   const ops = [{ type: 'create', id: 'eier', text: 'Eier', at: '2026-10-17T07:00:00.000Z' }];
@@ -49,14 +116,27 @@ test('given a pending create, then it is shown as open, pending, by me, and sort
   assert.equal(rows[1].pending, false);
 });
 
-test('given a pending check-off, then the item is shown checked, pending and last changed by me', () => {
+test('given a pending check-off, then the item is shown checked and pending', () => {
   const snapshot = { users, items: [item('Milch'), item('Brot')] };
   const ops = [{ type: 'setChecked', id: 'Milch', checked: true, at: '2026-10-17T10:00:00.000Z' }];
   const rows = buildRows(snapshot, ops, 'ben');
   assert.deepEqual(texts(rows), ['Brot', 'Milch']);
   assert.equal(rows[1].checked, true);
   assert.equal(rows[1].pending, true);
-  assert.equal(rows[1].meta, 'von Anna · zuletzt Ben');
+});
+
+test('given a checked-off item, then its row has no meta line', () => {
+  const snapshot = {
+    users,
+    items: [item('Milch', { checked: true, checkedAt: '2026-10-17 09:00:00.000Z', updatedBy: 'ben' })],
+  };
+  assert.equal(buildRows(snapshot, [], 'anna')[0].meta, '');
+});
+
+test('given a pending un-check by me, then the meta line names me as last editor again', () => {
+  const snapshot = { users, items: [item('Milch', { checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })] };
+  const ops = [{ type: 'setChecked', id: 'Milch', checked: false, at: '2026-10-17T10:00:00.000Z' }];
+  assert.equal(buildRows(snapshot, ops, 'ben')[0].meta, 'von Anna · zuletzt Ben');
 });
 
 test('given a pending create that is then checked off, then it is shown checked and pending', () => {
@@ -218,10 +298,25 @@ const now = at(18, 20, 0);
 const offlineSync = (lastSync, pending = 0) =>
   syncIndicator({ connection: 'offline', pending, lastSync: lastSync?.toISOString(), now });
 
-test('given the connection states, then the connection indicator shows state and text for each', () => {
-  assert.deepEqual(connectionIndicator('connecting'), { state: 'busy', text: 'Verbinde …' });
-  assert.deepEqual(connectionIndicator('online'), { state: 'ok', text: 'Verbunden' });
-  assert.deepEqual(connectionIndicator('offline'), { state: 'error', text: 'Offline' });
+test('given the connection states with pending changes, then the connection indicator shows state and text for each', () => {
+  assert.deepEqual(connectionIndicator({ connection: 'connecting', pending: 1 }), {
+    state: 'busy',
+    text: 'Verbinde …',
+  });
+  assert.deepEqual(connectionIndicator({ connection: 'online', pending: 1 }), { state: 'ok', text: 'Verbunden' });
+  assert.deepEqual(connectionIndicator({ connection: 'offline', pending: 1 }), { state: 'error', text: 'Offline' });
+});
+
+test('given the app is online without pending changes, then the connection indicator is hidden', () => {
+  assert.equal(connectionIndicator({ connection: 'online', pending: 0 }), false);
+});
+
+test('given the app is not online without pending changes, then the connection indicator is still shown', () => {
+  assert.deepEqual(connectionIndicator({ connection: 'connecting', pending: 0 }), {
+    state: 'busy',
+    text: 'Verbinde …',
+  });
+  assert.deepEqual(connectionIndicator({ connection: 'offline', pending: 0 }), { state: 'error', text: 'Offline' });
 });
 
 test('given the app is online without pending changes, then the sync indicator says synchronized', () => {

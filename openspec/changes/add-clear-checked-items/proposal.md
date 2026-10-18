@@ -28,12 +28,12 @@ a general multi-select mode.
 These decisions are still open and must be settled before the specs and the
 design are written.
 
-1. **Placement.** Options: a separator row above the checked-off items with a
-   count and the action ("Erledigt (3) · Alle löschen"), or an entry in the
-   account menu. Leaning towards the separator row, because it sits where the
-   items are and disappears when nothing is checked off. It overlaps with the
-   pending phone review of the header and status bar, so both may be decided
-   together.
+1. **Placement (decided).** The action goes into the header of the
+   collapsible "Erledigt (n)" section that the change
+   `improve-design-and-usability` introduces ("Erledigt (3) · Alle löschen").
+   It sits where the checked-off items are and disappears when nothing is
+   checked off. This change therefore builds on that one and is implemented
+   after it.
 2. **Confirmation.** A single checked-off item is deleted without asking.
    Clearing can remove many items for good, so leaning towards a short
    confirmation that states the count ("3 erledigte Einträge löschen?").

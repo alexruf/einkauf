@@ -59,9 +59,23 @@ export async function logOut(page) {
   await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
 }
 
-// The rows of the list as the user sees them.
-export const rows = (page) => page.locator('#items > li');
+// The rows of the list in the order the user sees them: open items, then
+// the checked-off items of the "Erledigt" section, which may be collapsed.
+export const rows = (page) => page.locator('.items > li');
 export const row = (page, text) => rows(page).filter({ has: page.locator('.text', { hasText: text }) });
+
+// Deletes an item the way a user does: through the edit mode of its row.
+export async function deleteInApp(page, text) {
+  await row(page, text).getByRole('button', { name: 'Mehr' }).click();
+  await page.locator('.item.is-editing').getByRole('button', { name: 'Löschen' }).click();
+}
+
+// Opens the collapsed "Erledigt" section, so checked-off rows are visible.
+export async function expandDone(page) {
+  const toggle = page.locator('#done-toggle');
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+}
 
 // The proxy each fixture context talks through, so tests can cut it.
 const proxies = new WeakMap();
@@ -69,11 +83,18 @@ const proxies = new WeakMap();
 // `annaPage` and `benPage` are logged-in pages in separate browser contexts,
 // like two phones. Each reaches the server through its own proxy, so one can
 // lose the connection while the other stays online. Contexts and proxies are
-// closed after the test.
+// closed after the test. They start with the "Erledigt" section open, so
+// tests can act on checked-off rows; tests of the collapsed default use the
+// plain `page` fixture.
 function pageFor(user) {
   return async ({ browser }, use) => {
     const proxy = await startProxy(server.url);
     const context = await browser.newContext({ baseURL: proxy.url });
+    // Only a first default: a test that collapses the section keeps that
+    // choice across reloads.
+    await context.addInitScript(() => {
+      if (!localStorage.getItem('einkauf-prefs')) localStorage.setItem('einkauf-prefs', '{"doneOpen":true}');
+    });
     proxies.set(context, proxy);
     const page = await context.newPage();
     await openAs(page, user);

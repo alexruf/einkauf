@@ -30,10 +30,11 @@ test('given the login screen, then the status bar shows the app version and no i
   await expect(sync(page)).toBeHidden();
 });
 
-test('given a logged-in user online, then both indicators are green and the version is shown', async ({ annaPage }) => {
-  await expect(connection(annaPage)).toHaveText('Verbunden');
-  await expect(connection(annaPage)).toHaveAttribute('data-state', 'ok');
+test('given a logged-in user online with nothing to send, then only the green sync indicator and the version are shown', async ({
+  annaPage,
+}) => {
   await expect(sync(annaPage)).toHaveText('Synchronisiert');
+  await expect(connection(annaPage)).toBeHidden();
   await expect(sync(annaPage)).toHaveAttribute('data-state', 'ok');
   await expect(footer(annaPage)).toContainText(VERSION);
 });
@@ -76,9 +77,11 @@ test.describe('on a 360 px wide phone', () => {
       page,
     }) => {
       await openAs(page, anna);
-      await expect(connection(page)).toHaveText('Verbunden');
+      await expect(sync(page)).toHaveText('Synchronisiert');
       await page.evaluate(
         ([c, s]) => {
+          // Both indicators are shown together whenever the app is not fully synchronized.
+          document.querySelector('#connection-indicator').hidden = false;
           document.querySelector('#connection-indicator .indicator-text').textContent = c;
           document.querySelector('#sync-indicator .indicator-text').textContent = s;
         },

@@ -71,6 +71,7 @@ test('given a claimed item, when it is checked off, then the claim is gone and t
 
   await expect(row(annaPage, 'Käse')).not.toHaveAttribute('data-claim');
   await expect(claimButton(annaPage, 'Käse')).toBeHidden();
+  await expect(row(annaPage, 'Käse').getByRole('button', { name: 'Mehr' })).toBeVisible();
   await expect.poll(async () => (await listItems()).map((i) => [i.checked, i.claimedBy])).toEqual([[true, '']]);
 });
 

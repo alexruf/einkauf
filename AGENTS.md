@@ -31,6 +31,7 @@ PocketBase, no build step.
 | `openspec/specs/` | Capability specs; changes go through OpenSpec        |
 | `tests/`          | `unit/`, `api/` (`node --test`), `e2e/` (Playwright) |
 | `scripts/`        | Tooling scripts run by `make` (`release.sh`)         |
+| `docs/`           | Human docs (`design.md`: visual design rules)        |
 
 Commands (Nix with flakes required, no Docker needed locally):
 
@@ -61,8 +62,10 @@ Project rules:
 - **Schema:** every schema change is a new file in `pb_migrations/`. Never
   edit or delete a migration that may already be applied in production.
   Production runs `--automigrate=false`.
-- **Frontend:** no npm, no bundler, no CDN. Third-party JS is vendored into
-  `pb_public/` (ask first, per Scope Discipline).
+- **Frontend:** no npm, no bundler, no CDN. Third-party JS and the font
+  (Atkinson Hyperlegible Next, OFL) are vendored into `pb_public/vendor/`
+  (ask first, per Scope Discipline). Visual changes follow `docs/design.md`;
+  values only as tokens in `app.css` `:root`.
 - **Config:** production hostname and secrets come only from `.env`; document
   every new variable in `.env.example` and reference it in `compose.yaml` as
   `${VAR:?message}`. `.env*` files may be unreadable to agents — ask the user
@@ -79,13 +82,14 @@ Project rules:
   fails). API tests: one server per file, tokens via impersonation (login
   is rate limited). E2E: one shared server per run, `workers: 1`; import
   `test`/`expect` from `tests/support/e2e.mjs` (fixtures `annaPage`,
-  `benPage` via cuttable proxies; offline only via `goOffline`/`goOnline`,
-  `setOffline` alone leaks requests). Password logins in e2e share one
+  `benPage` via cuttable proxies, start with "Erledigt" expanded; plain
+  `page` + `openAs` for the collapsed default; offline only via
+  `goOffline`/`goOnline`, `setOffline` alone leaks requests). Password logins in e2e share one
   10/min bucket; use `openAs` (impersonation) unless testing login. The
   e2e server raises only the general `/api/` limit (`global-setup.mjs`).
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
-  DOM-free modules (`ids`, `storage`, `app-name`, `outbox`, `view`, `sync`,
-  `update`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
+  DOM-free modules (`ids`, `storage`, `app-name`, `prefs`, `outbox`, `view`,
+  `hold`, `sync`, `update`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
   written only by `make release`; never edit it by hand. All writes go
   through the outbox. New files in `pb_public/` must be added to `SHELL` in
   `sw.js` (a test enforces it). CSP is a meta tag in

@@ -13,9 +13,11 @@ PocketBase runs as the standalone binary. The repository holds only what PocketB
 
 ## How the app works
 
-Every family member logs in with their own account and sees the same shared list. Items can be added, edited, checked off and un-checked, and each item shows who added it and who changed it last. Checked-off items are deleted automatically 24 hours after they were checked off.
+Every family member logs in with their own account and sees the same shared list. Items can be added, edited, checked off and un-checked, and each open item shows who added it and who changed it last. Checked-off items move into a collapsible "Erledigt" section below the open ones and are deleted automatically 24 hours after they were checked off. A row you just checked off stays where it is for a moment before it moves, so a quick series of taps never hits an item that slid under your finger.
 
-Before heading to a shop, a family member can claim an open item with the hand button, so the others know it is taken care of and nobody buys it twice. A claimed item gets a blue background and says who gets it. Anyone can remove a claim with the same button, and checking the item off removes it too. Claims nobody acts on expire after about three hours. Changes made by others appear live.
+The three dots next to an item open it for editing right in the list, with buttons to delete, cancel and save. Editing happens in the list rather than in a dialog, so the phone keyboard never covers the text field. The look of the app is described in [docs/design.md](docs/design.md).
+
+Before heading to a shop, a family member can claim an open item with the hand button, so the others know it is taken care of and nobody buys it twice. A claimed item gets a blue stripe and tint and says who gets it. Anyone can remove a claim with the same button, and checking the item off removes it too. Claims nobody acts on expire after about three hours. Changes made by others appear live.
 
 The app also works without a connection, which is common inside shops. It opens with the last known list, and items can be added, edited, checked off, un-checked and claimed offline. These changes are marked as not yet synchronized and are sent as soon as the connection returns. If two people change the same item, the change that reaches the server last wins. Deleting needs a connection.
 
@@ -132,9 +134,9 @@ Checklist:
 
 1. **Install:** in the browser, the login screen shows the collapsed hint "App installieren", and its steps match what the phone shows. Add the app to the home screen on both phones. It starts in its own window with the name "Einkauf" and the green basket icon, and its login screen no longer shows the install hint.
 2. **Login:** a wrong password shows "E-Mail oder Passwort ist falsch."; after logging in, the header shows your display name and no email address appears anywhere.
-3. **Live updates:** an item added on one phone appears on the other within a few seconds, with "von <name>". Checking it off shows "zuletzt <name>" on the other phone. Claiming an item with the hand button shows "<name> besorgt das" on a light blue background on the other phone, and "Du besorgst das" on a slightly stronger blue on your own.
-4. **Phone layout:** the keyboard does not cover the input field; every button and row is easy to hit with a thumb; nothing scrolls sideways. Check light and dark mode.
-5. **Airplane mode:** switch on airplane mode, close the app completely and open it from the home screen. The list appears with the offline hint. Add an item, edit one and check one off; all three are marked "nicht synchronisiert" and the delete buttons are disabled. Close and reopen the app; the changes are still there.
+3. **Live updates:** an item added on one phone appears on the other within a few seconds, with "von <name>". Changing its text shows "zuletzt <name>" on the other phone. Claiming an item with the hand button shows "<name> besorgt das" with a blue stripe on the other phone, and "Du besorgst das" with a stronger blue on your own.
+4. **Phone layout:** the keyboard does not cover the input field; every button and row is easy to hit with a thumb; nothing scrolls sideways. Open the three dots of an item near the bottom of a long list and tap the text field: the row moves above the keyboard. Check off several items quickly: the rows stay in place and then move into "Erledigt" together. Check light and dark mode.
+5. **Airplane mode:** switch on airplane mode, close the app completely and open it from the home screen. The list appears with the offline hint. Add an item, edit one and check one off; all three are marked "nicht synchronisiert", and deleting is disabled with a hint when you open an item. Close and reopen the app; the changes are still there.
 6. **Back online:** switch airplane mode off with the app open. Within a few seconds the marks disappear, and the other phone shows both changes.
 7. **In a shop:** open the app where the signal is weak. The list appears after at most about three seconds.
 8. **Logout:** log out, switch on airplane mode and open the app. Only the login screen appears, with no list.

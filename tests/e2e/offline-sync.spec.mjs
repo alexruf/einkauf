@@ -1,6 +1,7 @@
 import {
   createItem,
   deleteAllItems,
+  deleteInApp,
   expect,
   goOffline,
   goOnline,
@@ -63,7 +64,7 @@ test('given Anna changes the list offline, when she reconnects, then everyone se
   await expect(row(benPage, 'Eier')).toBeVisible({ timeout: 10000 });
   await expect(row(benPage, 'Eier').locator('.meta')).toHaveText('von Anna');
   await expect(row(benPage, 'Milch').getByRole('checkbox')).toBeChecked();
-  await expect(row(benPage, 'Milch').locator('.meta')).toHaveText('von Ben · zuletzt Anna');
+  await expect(row(benPage, 'Milch').locator('.meta')).toBeHidden();
 
   await expect(row(annaPage, 'Butter')).toBeVisible({ timeout: 10000 });
   await expect(annaPage.locator('.item.is-pending')).toHaveCount(0);
@@ -81,8 +82,7 @@ test('given Ben deletes an item Anna checked off offline, when Anna reconnects, 
   await row(annaPage, 'Brot').getByRole('checkbox').check();
 
   await benPage.reload();
-  await row(benPage, 'Milch').getByRole('button', { name: 'Löschen' }).click();
-  await benPage.getByRole('dialog').getByRole('button', { name: 'Löschen' }).click();
+  await deleteInApp(benPage, 'Milch');
   await expect(row(benPage, 'Milch')).toHaveCount(0);
 
   await goOnline(annaPage);
@@ -114,6 +114,6 @@ test('given the realtime connection fails right after reconnecting, when the ser
   );
   await goOnline(annaPage);
 
-  await expect(annaPage.locator('#connection-indicator')).toContainText('Verbunden', { timeout: 15000 });
+  await expect(annaPage.locator('#sync-indicator')).toContainText('Synchronisiert', { timeout: 15000 });
   await expect(annaPage.getByRole('status')).toBeHidden();
 });

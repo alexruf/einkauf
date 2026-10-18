@@ -11,7 +11,10 @@ const toMs = (date) => (date ? Date.parse(date.replace(' ', 'T')) : 0);
 // snapshot: { items, users } as last loaded from the server.
 // ops: pending outbox operations in the order they were made.
 // me: the id of the logged-in user, who made all pending changes.
-export function buildRows(snapshot, ops, me) {
+// held: sort keys ({ checked, checkedAt }) of items held in place after the
+// user's own change, by item id; see hold.js. A held row shows its current
+// state but keeps the position and section of its key.
+export function buildRows(snapshot, ops, me, held = new Map()) {
   const byId = new Map();
   for (const item of snapshot?.items ?? []) {
     byId.set(item.id, { ...item, pending: false });
@@ -63,27 +66,41 @@ export function buildRows(snapshot, ops, me) {
     // While claimed, who gets the item matters more than who added it.
     if (claim === 'mine') meta = 'Du besorgst das';
     if (claim === 'other') meta = `${claimant} besorgt das`;
+    // Once an item is bought, who added or changed it no longer matters.
+    if (item.checked) meta = '';
+    const checkedAt = toMs(item.checkedAt);
+    const sortKey = held.get(item.id) ?? { checked: item.checked, checkedAt };
     return {
       id: item.id,
       text: item.text,
       checked: item.checked,
+      section: sortKey.checked ? 'done' : 'open',
       pending: item.pending,
       claim,
       claimant,
       meta,
       created: toMs(item.created),
-      checkedAt: toMs(item.checkedAt),
+      checkedAt,
+      sortKey,
     };
   });
 
   // Open items oldest first, so the list reads in the order things were
   // added; then checked items, the most recently checked first.
   rows.sort((a, b) => {
-    if (a.checked !== b.checked) return a.checked ? 1 : -1;
-    const diff = a.checked ? b.checkedAt - a.checkedAt : a.created - b.created;
+    const [ka, kb] = [a.sortKey, b.sortKey];
+    if (ka.checked !== kb.checked) return ka.checked ? 1 : -1;
+    const diff = ka.checked ? kb.checkedAt - ka.checkedAt : a.created - b.created;
     return diff || a.id.localeCompare(b.id);
   });
   return rows;
+}
+
+// Describes where each row is: its order and section, and whether the
+// "Erledigt" section is open. Rows only move on screen when this changes, so
+// the app animates exactly those renders.
+export function layoutKey(rows, doneOpen) {
+  return `${doneOpen}|${rows.map((row) => `${row.id}:${row.section}`).join(',')}`;
 }
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -100,13 +117,15 @@ function formatSyncTime(date, now) {
   return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${year}, ${time}`;
 }
 
-// The status bar shows two indicators, each a colored dot with a text. The
+// The status bar shows up to two indicators, each a colored dot with a text. The
 // state picks the color: 'ok' green, 'busy' and 'pending' yellow ('busy'
 // pulses), 'error' red, 'idle' grey.
 
-// connection: 'connecting', 'online' or 'offline'.
-export function connectionIndicator(connection) {
-  if (connection === 'online') return { state: 'ok', text: 'Verbunden' };
+// connection: 'connecting', 'online' or 'offline'; pending: number of unsent
+// changes. Returns false while online with nothing to send: the sync
+// indicator then says "Synchronisiert", which already implies the connection.
+export function connectionIndicator({ connection, pending }) {
+  if (connection === 'online') return pending === 0 ? false : { state: 'ok', text: 'Verbunden' };
   if (connection === 'offline') return { state: 'error', text: 'Offline' };
   return { state: 'busy', text: 'Verbinde …' };
 }

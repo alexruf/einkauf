@@ -42,7 +42,7 @@ test.beforeEach(async ({ browser }) => {
   const checked = versionCheck();
   await page.reload();
   await checked;
-  await expect(page.locator('#connection-indicator')).toContainText('Verbunden');
+  await expect(page.locator('#sync-indicator')).toContainText('Synchronisiert');
   // Gone after a reload, so the tests can tell whether the app reloaded.
   await page.evaluate(() => {
     window.notReloaded = true;
@@ -118,7 +118,7 @@ test('given the deployed version cannot be read, when the app reconnects, then i
   await reconnect();
   expect(await reloaded()).toBe(false);
   await expect(page.locator('#app-version')).toHaveText(running);
-  await expect(page.locator('#connection-indicator')).toContainText('Verbunden');
+  await expect(page.locator('#sync-indicator')).toContainText('Synchronisiert');
 
   await writeVersionFile(original);
   const version = await deploy();
@@ -141,25 +141,25 @@ test('given text in the input field, when a new version is found, then the app w
   await expect(row(page, 'Brot')).not.toHaveClass(/is-pending/);
 });
 
-test('given an open edit dialog, when a new version is found, then the app reloads only after the dialog was closed', async () => {
+test('given a row in edit mode, when a new version is found, then the app reloads only after editing ended', async () => {
   const created = await api(server.url, '/api/collections/items/records', {
     method: 'POST',
     token: user.token,
     body: { text: 'Milch' },
   });
   expect(created.status).toBe(200);
-  await row(page, 'Milch').locator('.edit').click();
-  const dialog = page.getByRole('dialog');
-  await expect(dialog).toBeVisible();
+  await row(page, 'Milch').getByRole('button', { name: 'Mehr' }).click();
+  const editRow = page.locator('.item.is-editing');
+  await expect(editRow).toBeVisible();
 
   const running = await page.locator('#app-version').textContent();
   const version = await deploy();
   await reconnect();
   expect(await reloaded()).toBe(false);
-  await expect(dialog).toBeVisible();
+  await expect(editRow).toBeVisible();
   await expect(page.locator('#app-version')).toHaveText(running);
 
-  await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+  await editRow.getByRole('button', { name: 'Abbrechen' }).click();
   await expect(page.locator('#app-version')).toHaveText(version);
 });
 
