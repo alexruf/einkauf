@@ -3,6 +3,11 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.18.3 (2026-10-18)
+
+### Features
+
+- **web-app:** Reload running apps after a new deployment
 ## 2026.10.18.2 (2026-10-18)
 
 ### Features
