@@ -59,7 +59,9 @@ grep -q '^- ' <<<"$notes" || notes="Release $version"
 git add "$VERSION_FILE" CHANGELOG.md
 git commit --quiet --message "chore(release): $version"
 # Verbatim, so the Markdown headings of the notes are not taken as comments.
-git tag --annotate --cleanup=verbatim --message "$notes" "$tag"
+# The final newline matters: a signature, if Git is set up to sign tags, is
+# appended right after the message and must start on a line of its own.
+printf '%s\n' "$notes" | git tag --annotate --cleanup=verbatim --file=- "$tag"
 
 echo "Created release $version. Check it, then push it with:"
 echo "  git push origin main $tag"

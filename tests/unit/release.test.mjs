@@ -141,6 +141,16 @@ test('given a release, then its annotated tag carries the release notes', () => 
   assert.match(message, /Add shopping list/);
 });
 
+// Git appends a tag signature directly after the message. Without a final
+// newline, the signature does not start on its own line and is not found.
+test('given a release, then the tag message ends with a newline so a signature stays valid', () => {
+  const { work } = setup();
+  releaseOk(work, '2026.10.19');
+  const raw = run('git', ['cat-file', 'tag', 'v2026.10.19.0'], work).stdout;
+  assert.ok(raw.endsWith('\n'), 'tag message must end with a newline');
+  assert.doesNotMatch(raw, /\n\n$/);
+});
+
 test('given a release with only commits the changelog leaves out, then the tag message names the release', () => {
   const { work } = setup();
   releaseOk(work, '2026.10.19');
