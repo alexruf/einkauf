@@ -36,8 +36,10 @@ Commands (Nix with flakes required, no Docker needed locally):
 
 - `make dev` — run PocketBase on `http://localhost:8090` (admin UI at `/_/`)
 - `make clean` — delete `pb_data/`; keeps migrations
-- `make test` — unit + API tests (`node --test`), then e2e (Playwright); each
-  run uses a temp PocketBase on a free port, never `pb_data/`
+- `make lint` — Biome check (format + lint, read-only) and ShellCheck on
+  `scripts/*.sh`; `make fmt` applies Biome formatting and safe fixes
+- `make test` — `make lint`, then unit + API tests (`node --test`), then e2e
+  (Playwright); each run uses a temp PocketBase on a free port, never `pb_data/`
 - `make release` — next CalVer version, `CHANGELOG.md` (git-cliff,
   `cliff.toml`), commit `chore(release): <version>` and tag `v<version>`,
   local only (`scripts/release.sh`). Never push for the user; never move or
@@ -65,6 +67,11 @@ Project rules:
   every new variable in `.env.example` and reference it in `compose.yaml` as
   `${VAR:?message}`. `.env*` files may be unreadable to agents — ask the user
   instead of working around it.
+- **Lint:** config in `biome.jsonc`. Run `make fmt` after edits. PocketBase
+  JSVM globals for `pb_hooks/`, `pb_migrations/` = top-level declarations in
+  `pb_data/types.d.ts`; refresh on PocketBase upgrade. `pb_migrations/` is
+  lint-only (never reformat). Suppress a finding only with `biome-ignore` +
+  reason, and only for false positives.
 - **Tests:** `make test`. Harness in `tests/support/` (`server.mjs`: temp
   server, `createUser`, `impersonate`, `api`). No npm: Node and Playwright
   come from the dev shell; import Playwright only via

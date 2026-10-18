@@ -55,6 +55,8 @@ Prerequisites: [Nix](https://nixos.org/) with flakes enabled.
 ```sh
 make dev            # start PocketBase on http://localhost:8090
 make clean          # delete local data (pb_data/) to start fresh
+make fmt            # format the code and apply safe lint fixes
+make lint           # check formatting and lint without changing files
 make help           # list all targets
 make release        # create the next release locally (see Releases)
 ```
@@ -74,13 +76,27 @@ nix develop -c pocketbase superuser upsert you@example.com <password> --dir=./pb
 
 Changes to files in `pb_public/` are visible after a browser reload. Changes in `pb_hooks/` restart the server automatically.
 
+### Formatting and lint
+
+[Biome](https://biomejs.dev/) formats and lints the JavaScript, CSS and JSON files, and [ShellCheck](https://www.shellcheck.net/) checks the scripts in `scripts/`. Both come from the Nix dev shell, like everything else. Run `make fmt` before committing; `make test` fails while `make lint` reports anything.
+
+The rules are Biome's recommended set plus a check for undeclared variables. Without a build step, a misspelled name would otherwise only show up when the code runs, and in a hook that means on the server. Hooks and migrations run in PocketBase's own JavaScript runtime, so `biome.jsonc` lists the globals it provides. The list comes from `pb_data/types.d.ts`, which PocketBase generates for its version, so refresh it when upgrading PocketBase.
+
+Migrations are linted but never reformatted, because a migration that already ran in production must stay exactly as it is. The vendored PocketBase SDK is skipped entirely.
+
+The commit that first formatted the code with Biome is listed in `.git-blame-ignore-revs`, so `git blame` shows who last changed a line's content rather than that reformatting. GitHub and GitLab pick the file up on their own; for a local `git blame`, run this once:
+
+```sh
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Tests
 
 ```sh
 make test
 ```
 
-This runs the unit and API tests with `node --test` and then the browser tests with Playwright. Both tools come from the Nix dev shell, so there is no `npm install` and no `node_modules/`. The first run downloads Node, Playwright and its browsers into the Nix store, which takes a while.
+This first runs `make lint`, then the unit and API tests with `node --test`, and then the browser tests with Playwright. Both tools come from the Nix dev shell, so there is no `npm install` and no `node_modules/`. The first run downloads Node, Playwright and its browsers into the Nix store, which takes a while.
 
 The tests start their own PocketBase on a free port with a temporary data directory and delete it afterwards. You don't need `make dev` running, and your local `pb_data/` is never touched.
 

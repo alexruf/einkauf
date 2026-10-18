@@ -11,7 +11,7 @@ test.describe('on a 360 px wide phone', () => {
     page,
   }) => {
     await createItem(anna, 'Milch');
-    await createItem(ben, 'Ein sehr langer Eintrag ohne Leerzeichen: ' + 'x'.repeat(150));
+    await createItem(ben, `Ein sehr langer Eintrag ohne Leerzeichen: ${'x'.repeat(150)}`);
     await createItem(anna, 'Brot');
     await openAs(page, anna);
     await row(page, 'Brot').getByRole('checkbox').check();

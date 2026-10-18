@@ -1,0 +1,208 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  // The vendored SDK and the icons are not ours to lint; the OpenSpec and agent
+  // folders hold only Markdown.
+  "files": {
+    "includes": ["**", "!pb_public/vendor", "!pb_public/icons", "!openspec", "!.agents", "!.claude", "!.omp"]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
+  // Not in the recommended set, but cheap insurance in code without a build
+  // step: a misspelled name otherwise only fails at runtime.
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noUndeclaredVariables": "error"
+      }
+    }
+  },
+  "overrides": [
+    // Hooks and migrations run in PocketBase's JS runtime, which provides these
+    // globals. The list is every top-level declaration in pb_data/types.d.ts,
+    // the type file PocketBase generates for its pinned version; refresh it when
+    // upgrading PocketBase. These files also keep their double quotes.
+    {
+      "includes": ["pb_hooks/**", "pb_migrations/**"],
+      "javascript": {
+        "globals": [
+          "__hooks",
+          "$apis",
+          "$app",
+          "$dbx",
+          "$filepath",
+          "$filesystem",
+          "$http",
+          "$mails",
+          "$os",
+          "$security",
+          "$template",
+          "ApiError",
+          "AppleClientSecretCreateForm",
+          "arrayOf",
+          "AutodateField",
+          "BadRequestError",
+          "BoolField",
+          "Collection",
+          "Command",
+          "Context",
+          "Cookie",
+          "cronAdd",
+          "cronRemove",
+          "DateField",
+          "DateTime",
+          "DynamicModel",
+          "EditorField",
+          "EmailField",
+          "Field",
+          "FieldsList",
+          "FileField",
+          "ForbiddenError",
+          "GeoPointField",
+          "InternalServerError",
+          "JSONField",
+          "MailerMessage",
+          "Middleware",
+          "migrate",
+          "NotFoundError",
+          "nullArray",
+          "nullBool",
+          "nullFloat",
+          "nullInt",
+          "nullObject",
+          "nullString",
+          "NumberField",
+          "onBackupCreate",
+          "onBackupRestore",
+          "onBatchRequest",
+          "onBootstrap",
+          "onBootstrapClear",
+          "onCollectionAfterCreateError",
+          "onCollectionAfterCreateSuccess",
+          "onCollectionAfterDeleteError",
+          "onCollectionAfterDeleteSuccess",
+          "onCollectionAfterUpdateError",
+          "onCollectionAfterUpdateSuccess",
+          "onCollectionCreate",
+          "onCollectionCreateExecute",
+          "onCollectionCreateRequest",
+          "onCollectionDelete",
+          "onCollectionDeleteExecute",
+          "onCollectionDeleteRequest",
+          "onCollectionsImportRequest",
+          "onCollectionsListRequest",
+          "onCollectionUpdate",
+          "onCollectionUpdateExecute",
+          "onCollectionUpdateRequest",
+          "onCollectionValidate",
+          "onCollectionViewRequest",
+          "onFileDownloadRequest",
+          "onFileTokenRequest",
+          "onMailerRecordAuthAlertSend",
+          "onMailerRecordEmailChangeSend",
+          "onMailerRecordOTPSend",
+          "onMailerRecordPasswordResetSend",
+          "onMailerRecordVerificationSend",
+          "onMailerSend",
+          "onModelAfterCreateError",
+          "onModelAfterCreateSuccess",
+          "onModelAfterDeleteError",
+          "onModelAfterDeleteSuccess",
+          "onModelAfterUpdateError",
+          "onModelAfterUpdateSuccess",
+          "onModelCreate",
+          "onModelCreateExecute",
+          "onModelDelete",
+          "onModelDeleteExecute",
+          "onModelUpdate",
+          "onModelUpdateExecute",
+          "onModelValidate",
+          "onRealtimeConnectRequest",
+          "onRealtimeMessageSend",
+          "onRealtimeSubscribeRequest",
+          "onRecordAfterCreateError",
+          "onRecordAfterCreateSuccess",
+          "onRecordAfterDeleteError",
+          "onRecordAfterDeleteSuccess",
+          "onRecordAfterUpdateError",
+          "onRecordAfterUpdateSuccess",
+          "onRecordAuthRefreshRequest",
+          "onRecordAuthRequest",
+          "onRecordAuthWithOAuth2Request",
+          "onRecordAuthWithOTPRequest",
+          "onRecordAuthWithPasswordRequest",
+          "onRecordConfirmEmailChangeRequest",
+          "onRecordConfirmPasswordResetRequest",
+          "onRecordConfirmVerificationRequest",
+          "onRecordCreate",
+          "onRecordCreateExecute",
+          "onRecordCreateRequest",
+          "onRecordDelete",
+          "onRecordDeleteExecute",
+          "onRecordDeleteRequest",
+          "onRecordEnrich",
+          "onRecordRequestEmailChangeRequest",
+          "onRecordRequestOTPRequest",
+          "onRecordRequestPasswordResetRequest",
+          "onRecordRequestVerificationRequest",
+          "onRecordsListRequest",
+          "onRecordUpdate",
+          "onRecordUpdateExecute",
+          "onRecordUpdateRequest",
+          "onRecordValidate",
+          "onRecordViewRequest",
+          "onSettingsListRequest",
+          "onSettingsReload",
+          "onSettingsUpdateRequest",
+          "onTerminate",
+          "PasswordField",
+          "readerToString",
+          "Record",
+          "RecordUpsertForm",
+          "RelationField",
+          "RequestInfo",
+          "routerAdd",
+          "routerUse",
+          "SelectField",
+          "sleep",
+          "SubscriptionMessage",
+          "TestEmailSendForm",
+          "TestS3FilesystemForm",
+          "TextField",
+          "Timezone",
+          "toBytes",
+          "TooManyRequestsError",
+          "toString",
+          "UnauthorizedError",
+          "unmarshal",
+          "URLField",
+          "ValidationError"
+        ],
+        "formatter": {
+          "quoteStyle": "double"
+        }
+      }
+    },
+    // Migrations already applied in production must not change, not even their
+    // formatting, so they are only linted.
+    {
+      "includes": ["pb_migrations/**"],
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ]
+}

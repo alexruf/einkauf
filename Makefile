@@ -14,8 +14,17 @@ dev: ## Start PocketBase locally in dev mode on http://localhost:8090
 clean: ## Delete local runtime data (pb_data/) and Nix build links; keeps migrations
 	rm -rf ./pb_data ./result
 
+.PHONY: lint
+lint: ## Check formatting and lint findings without changing files
+	nix develop -c biome check .
+	nix develop -c shellcheck scripts/*.sh
+
+.PHONY: fmt
+fmt: ## Format files and apply safe lint fixes
+	nix develop -c biome check --write .
+
 .PHONY: test
-test: ## Run all automated tests against a temporary PocketBase instance
+test: lint ## Lint, then run all automated tests against a temporary PocketBase instance
 	nix develop -c node --test "tests/unit/**/*.test.mjs" "tests/api/**/*.test.mjs"
 	nix develop -c playwright test
 

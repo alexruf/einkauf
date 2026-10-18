@@ -73,7 +73,6 @@ export function createSync({
       try {
         await send(op);
         outbox.remove(op);
-        continue;
       } catch (error) {
         let outcome = classify(op, error);
         if (outcome === 'maybe-duplicate') {

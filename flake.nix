@@ -51,6 +51,10 @@
             # Test tooling: `node --test` for API and client logic, Playwright for browser tests.
             pkgs.nodejs
             pkgs.playwright-test
+            # Lint and formatting for the JS/CSS/JSON files (`make lint`, `make fmt`).
+            pkgs.biome
+            # Lint for the shell scripts in scripts/.
+            pkgs.shellcheck
           ];
           # Use the browsers built for the same nixpkgs Playwright release instead of downloading them.
           PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";

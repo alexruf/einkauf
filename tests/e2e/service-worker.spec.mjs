@@ -48,7 +48,7 @@ test('given every file in pb_public, then the Service Worker precaches it', asyn
   const sw = await readFile(join(PUBLIC_DIR, 'sw.js'), 'utf8');
   const files = (await readdir(PUBLIC_DIR, { recursive: true, withFileTypes: true }))
     .filter((entry) => entry.isFile())
-    .map((entry) => '/' + relative(PUBLIC_DIR, join(entry.parentPath, entry.name)))
+    .map((entry) => `/${relative(PUBLIC_DIR, join(entry.parentPath, entry.name))}`)
     .filter((path) => path !== '/sw.js' && path !== '/index.html');
   for (const path of files) expect(sw, `${path} missing from SHELL in sw.js`).toContain(`'${path}'`);
 });

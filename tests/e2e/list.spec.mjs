@@ -1,7 +1,7 @@
 import { createItem, deleteAllItems, expect, listItems, row, rows, server, test, users } from '../support/e2e.mjs';
 import { api, createUser } from '../support/server.mjs';
 
-const { anna, ben } = users;
+const { ben } = users;
 
 test.beforeEach(deleteAllItems);
 
@@ -71,14 +71,14 @@ test('given item text with markup, when added, then everyone sees exactly that t
   expect(dialogs).toBe(0);
 });
 
-test('given empty or whitespace text, when adding, then no item is created', async ({ annaPage, benPage }) => {
+test('given empty or whitespace text, when adding, then no item is created', async ({ annaPage }) => {
   await add(annaPage, '   ');
   await add(annaPage, '');
   await expect(annaPage.getByText('Die Liste ist leer.')).toBeVisible();
   expect(await listItems()).toHaveLength(0);
 });
 
-test('given an item whose creator account was removed, then it shows "Unbekannt"', async ({ annaPage, benPage }) => {
+test('given an item whose creator account was removed, then it shows "Unbekannt"', async ({ annaPage }) => {
   const dora = await createUser(server, 'Dora');
   await createItem(dora, 'Salz');
   await api(server.url, `/api/collections/users/records/${dora.id}`, {

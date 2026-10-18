@@ -18,8 +18,7 @@ export async function connectRealtime(url) {
     try {
       for await (const chunk of res.body) {
         buffer += decoder.decode(chunk, { stream: true });
-        let end;
-        while ((end = buffer.indexOf('\n\n')) !== -1) {
+        for (let end = buffer.indexOf('\n\n'); end !== -1; end = buffer.indexOf('\n\n')) {
           const raw = buffer.slice(0, end);
           buffer = buffer.slice(end + 2);
           const event = { name: 'message', data: '' };
