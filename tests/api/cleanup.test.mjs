@@ -76,3 +76,42 @@ test('given a subscriber, when the cleanup deletes an item, then the subscriber 
     client.close();
   }
 });
+
+const getItem = async (id) => (await api(server.url, `${ITEMS}/${id}`, { token: server.superuserToken })).body;
+
+test('given claims of different ages, when the cleanup runs, then only claims older than 3 hours are released', async () => {
+  const old = await createItem('Alt markiert', { claimedBy: anna.id, claimedAt: hoursAgo(3.5) });
+  const recent = await createItem('Neu markiert', { claimedBy: anna.id, claimedAt: hoursAgo(2.5) });
+
+  const res = await cleanup(server.superuserToken);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(res.body.released >= 1, `released ${res.body.released}`);
+
+  const released = await getItem(old.id);
+  assert.equal(released.claimedBy, '');
+  assert.equal(released.claimedAt, '');
+  assert.equal((await getItem(recent.id)).claimedBy, anna.id);
+});
+
+test('given an expired claim, when the cleanup releases it, then the last editor is unchanged', async () => {
+  const ben = await createUser(server, 'Ben');
+  const item = await createItem('Milch', { updatedBy: ben.id, claimedBy: anna.id, claimedAt: hoursAgo(5) });
+  assert.equal((await cleanup(server.superuserToken)).status, 200);
+  const stored = await getItem(item.id);
+  assert.equal(stored.claimedBy, '');
+  assert.equal(stored.updatedBy, ben.id);
+});
+
+test('given a subscriber, when the cleanup releases a claim, then the subscriber receives an update event', async () => {
+  const item = await createItem('Eier', { claimedBy: anna.id, claimedAt: hoursAgo(4) });
+  const client = await connectRealtime(server.url);
+  try {
+    await client.subscribe(['items'], anna.token);
+    assert.equal((await cleanup(server.superuserToken)).status, 200);
+    await client.waitFor(
+      (e) => e.name === 'items' && e.data.action === 'update' && e.data.record?.id === item.id && e.data.record.claimedBy === '',
+    );
+  } finally {
+    client.close();
+  }
+});

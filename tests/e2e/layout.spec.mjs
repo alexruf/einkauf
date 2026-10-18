@@ -14,6 +14,10 @@ test.describe('on a 360 px wide phone', () => {
     await openAs(page, anna);
     await row(page, 'Brot').getByRole('checkbox').check();
     await expect(row(page, 'Brot')).toHaveClass(/is-checked/);
+    // A claimed row has three buttons and a background that reaches past the
+    // text, so it must still fit.
+    await row(page, 'Milch').locator('button.claim').click();
+    await expect(row(page, 'Milch')).toHaveAttribute('data-claim', 'mine');
 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
@@ -29,12 +33,17 @@ test.describe('on a 360 px wide phone', () => {
       expect(box.height, `height of ${name}`).toBeGreaterThanOrEqual(44);
     }
 
-    // Next to the edit and delete buttons, the check-off area takes the
-    // rest of the row.
+    // Next to the claim, edit and delete buttons, the check-off area takes
+    // the rest of the row.
     const rowBox = await row(page, 'Milch').boundingBox();
     const toggleBox = await row(page, 'Milch').locator('label.toggle').boundingBox();
     const buttonsWidth = await row(page, 'Milch').locator('button').evaluateAll((els) => els.reduce((sum, el) => sum + el.offsetWidth, 0));
-    expect(toggleBox.width).toBeGreaterThanOrEqual(rowBox.width - buttonsWidth - 16);
+    // The claimed row's padding is part of its box but not available to the label.
+    const padding = await row(page, 'Milch').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    });
+    expect(toggleBox.width).toBeGreaterThanOrEqual(rowBox.width - padding - buttonsWidth - 16);
 
     // Tapping the text, far from the small checkbox, toggles the row.
     await row(page, 'Milch').locator('.text').tap();

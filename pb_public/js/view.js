@@ -37,11 +37,16 @@ export function buildRows(snapshot, ops, me) {
         ...item,
         checked: op.checked,
         checkedAt: op.checked ? op.at : '',
+        // The server releases the claim of an item that is checked off.
+        claimedBy: op.checked ? '' : item.claimedBy,
         updatedBy: me,
         pending: true,
       });
     } else if (op.type === 'setText' && item) {
       byId.set(op.id, { ...item, text: op.text, updatedBy: me, pending: true });
+    } else if (op.type === 'setClaimed' && item && !item.checked) {
+      // The server ignores claims of checked items, so they are not shown.
+      byId.set(op.id, { ...item, claimedBy: op.claimed ? me : '', updatedBy: me, pending: true });
     }
   }
 
@@ -51,12 +56,20 @@ export function buildRows(snapshot, ops, me) {
   const rows = [...byId.values()].map((item) => {
     const creator = nameOf(item.createdBy);
     const editor = item.updatedBy ? nameOf(item.updatedBy) : creator;
+    const claim = item.claimedBy ? (item.claimedBy === me ? 'mine' : 'other') : null;
+    const claimant = claim && nameOf(item.claimedBy);
+    let meta = item.updatedBy && item.updatedBy !== item.createdBy ? `von ${creator} · zuletzt ${editor}` : `von ${creator}`;
+    // While claimed, who gets the item matters more than who added it.
+    if (claim === 'mine') meta = 'Du besorgst das';
+    if (claim === 'other') meta = `${claimant} besorgt das`;
     return {
       id: item.id,
       text: item.text,
       checked: item.checked,
       pending: item.pending,
-      meta: item.updatedBy && item.updatedBy !== item.createdBy ? `von ${creator} · zuletzt ${editor}` : `von ${creator}`,
+      claim,
+      claimant,
+      meta,
       created: toMs(item.created),
       checkedAt: toMs(item.checkedAt),
     };

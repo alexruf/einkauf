@@ -128,6 +128,70 @@ test('given an item changed by someone else, then the meta line names creator an
   assert.equal(row.meta, 'von Anna · zuletzt Ben');
 });
 
+test('given an unclaimed item, then its row has no claim', () => {
+  const [row] = buildRows({ users, items: [item('Milch')] }, [], 'anna');
+  assert.equal(row.claim, null);
+  assert.equal(row.claimant, null);
+});
+
+test('given an item claimed by me, then the row says I get it', () => {
+  const [row] = buildRows({ users, items: [item('Milch', { claimedBy: 'anna' })] }, [], 'anna');
+  assert.equal(row.claim, 'mine');
+  assert.equal(row.claimant, 'Anna');
+  assert.equal(row.meta, 'Du besorgst das');
+});
+
+test('given an item claimed by someone else, then the row names them', () => {
+  const [row] = buildRows({ users, items: [item('Milch', { claimedBy: 'ben' })] }, [], 'anna');
+  assert.equal(row.claim, 'other');
+  assert.equal(row.claimant, 'Ben');
+  assert.equal(row.meta, 'Ben besorgt das');
+});
+
+test('given an item claimed by an unknown user, then the claimant is shown as Unbekannt', () => {
+  const [row] = buildRows({ users, items: [item('Milch', { claimedBy: 'gone' })] }, [], 'anna');
+  assert.equal(row.claim, 'other');
+  assert.equal(row.meta, 'Unbekannt besorgt das');
+});
+
+test('given a pending claim, then the item is claimed by me, pending and last changed by me', () => {
+  const ops = [{ type: 'setClaimed', id: 'Milch', claimed: true, at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows({ users, items: [item('Milch')] }, ops, 'ben');
+  assert.equal(row.claim, 'mine');
+  assert.equal(row.pending, true);
+  assert.equal(row.meta, 'Du besorgst das');
+  // Once released, the meta line shows the last editor again.
+  const released = buildRows({ users, items: [item('Milch')] }, [...ops, { ...ops[0], claimed: false }], 'ben')[0];
+  assert.equal(released.claim, null);
+  assert.equal(released.meta, 'von Anna · zuletzt Ben');
+});
+
+test('given a pending release of someone else\'s claim, then the item is unclaimed and pending', () => {
+  const ops = [{ type: 'setClaimed', id: 'Milch', claimed: false, at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows({ users, items: [item('Milch', { claimedBy: 'anna' })] }, ops, 'ben');
+  assert.equal(row.claim, null);
+  assert.equal(row.pending, true);
+});
+
+test('given a pending claim of a checked item, then it is ignored', () => {
+  const ops = [{ type: 'setClaimed', id: 'Milch', claimed: true, at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows({ users, items: [item('Milch', { checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })] }, ops, 'ben');
+  assert.equal(row.claim, null);
+  assert.equal(row.pending, false);
+});
+
+test('given a pending check-off of a claimed item, then the claim is gone', () => {
+  const ops = [{ type: 'setChecked', id: 'Milch', checked: true, at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows({ users, items: [item('Milch', { claimedBy: 'anna' })] }, ops, 'ben');
+  assert.equal(row.checked, true);
+  assert.equal(row.claim, null);
+});
+
+test('given a pending claim of an item no longer on the server, then it is not shown', () => {
+  const ops = [{ type: 'setClaimed', id: 'Milch', claimed: true, at: '2026-10-17T10:00:00.000Z' }];
+  assert.deepEqual(buildRows({ users, items: [] }, ops, 'ben'), []);
+});
+
 test('given no snapshot yet, then only pending items are shown', () => {
   const ops = [{ type: 'create', id: 'eier', text: 'Eier', at: '2026-10-17T10:00:00.000Z' }];
   assert.deepEqual(texts(buildRows(undefined, ops, 'anna')), ['Eier']);

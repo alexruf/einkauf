@@ -27,6 +27,35 @@ function applyMemberWrite(record, auth, isCreate) {
     // repeated offline sync does not postpone the cleanup.
     record.set("checkedAt", original.get("checkedAt"));
   }
+
+  applyClaim(record, auth, original);
+}
+
+// The client sends any non-empty claimedBy to claim the item and an empty one
+// to release it. Only "set or cleared" counts: the claimant is always the
+// requester, so nobody can claim in someone else's name. Only open items can
+// be claimed, and checking an item off releases it.
+function applyClaim(record, auth, original) {
+  const release = () => {
+    record.set("claimedBy", "");
+    record.set("claimedAt", "");
+  };
+  if (!original || record.getBool("checked")) {
+    release();
+    return;
+  }
+
+  const claimedBy = record.getString("claimedBy");
+  if (claimedBy === original.getString("claimedBy")) {
+    // Not part of this update, or the same user claiming again: keep the
+    // original time, so a repeated offline sync does not extend the claim.
+    record.set("claimedAt", original.get("claimedAt"));
+  } else if (claimedBy) {
+    record.set("claimedBy", auth.id);
+    record.set("claimedAt", new DateTime());
+  } else {
+    release();
+  }
 }
 
 // Checked-off items older than this are deleted, so the list does not fill up
@@ -54,4 +83,29 @@ function deleteOldCheckedItems(app) {
   return records.length;
 }
 
-module.exports = { applyMemberWrite, deleteOldCheckedItems };
+// A claim older than this is released, so a forgotten claim does not keep
+// others from buying the item.
+const CLAIM_RETENTION_MS = 3 * 60 * 60 * 1000;
+
+// Releases expired claims. Saving through the app sends realtime events and
+// skips the request hook, so the item's last editor stays as it was. Returns
+// the number of released claims.
+function releaseExpiredClaims(app) {
+  const cutoff = new Date(Date.now() - CLAIM_RETENTION_MS).toISOString().replace("T", " ");
+  const records = app.findRecordsByFilter(
+    "items",
+    "claimedAt != '' && claimedAt < {:cutoff}",
+    "",
+    0,
+    0,
+    { cutoff },
+  );
+  for (const record of records) {
+    record.set("claimedBy", "");
+    record.set("claimedAt", "");
+    app.save(record);
+  }
+  return records.length;
+}
+
+module.exports = { applyMemberWrite, deleteOldCheckedItems, releaseExpiredClaims };

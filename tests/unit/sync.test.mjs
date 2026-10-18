@@ -59,7 +59,8 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
       },
     },
   };
-  return { pb: { collection: (name) => collections[name] }, server, calls, updates };
+  const authStore = { record: { id: 'anna', collectionName: 'users' } };
+  return { pb: { collection: (name) => collections[name], authStore }, server, calls, updates };
 }
 
 function setup(pbOptions, { now } = {}) {
@@ -199,6 +200,45 @@ test('given a text change the server refuses, when flushing, then it is dropped 
   assert.deepEqual(events.rejected.map((op) => op.id), ['a']);
   assert.equal(server.get('a').text, 'A');
   assert.equal(server.get('b').text, 'B2');
+});
+
+test('given a pending claim, when flushing, then the logged-in user is sent as claimant', async () => {
+  const { sync, outbox, updates } = setup({ items: [{ id: 'milch', text: 'Milch' }] });
+  outbox.add({ type: 'setClaimed', id: 'milch', claimed: true });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(updates, [['milch', { claimedBy: 'anna' }]]);
+  assert.deepEqual(outbox.list(), []);
+});
+
+test('given a pending release, when flushing, then an empty claimant is sent', async () => {
+  const { sync, outbox, updates } = setup({ items: [{ id: 'milch', text: 'Milch', claimedBy: 'ben' }] });
+  outbox.add({ type: 'setClaimed', id: 'milch', claimed: false });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(updates, [['milch', { claimedBy: '' }]]);
+});
+
+test('given a claim of an item deleted on the server, when flushing, then it is dropped and the rest is sent', async () => {
+  const { sync, outbox, server, events } = setup({ items: [{ id: 'brot', text: 'Brot' }] });
+  outbox.add({ type: 'setClaimed', id: 'milch', claimed: true });
+  outbox.add({ type: 'setClaimed', id: 'brot', claimed: true });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(outbox.list(), []);
+  assert.equal(server.get('brot').claimedBy, 'anna');
+  assert.deepEqual(events.rejected, []);
+});
+
+test('given claimed items on the server, when reloading, then the claim fields are kept in the snapshot', async () => {
+  const { sync, store } = setup({
+    items: [{ id: 'milch', text: 'Milch', claimedBy: 'ben', claimedAt: '2026-10-18 10:00:00.000Z' }],
+  });
+
+  await sync.flush();
+  const [item] = store.get('snapshot').items;
+  assert.equal(item.claimedBy, 'ben');
+  assert.equal(item.claimedAt, '2026-10-18 10:00:00.000Z');
 });
 
 test('given the server is busy, when flushing, then it stops and keeps the change for later', async () => {

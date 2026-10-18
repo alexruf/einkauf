@@ -1,15 +1,22 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 cronAdd("einkauf_cleanup", "0 * * * *", () => {
-  const deleted = require(`${__hooks}/items.js`).deleteOldCheckedItems($app);
+  const items = require(`${__hooks}/items.js`);
+  const deleted = items.deleteOldCheckedItems($app);
   if (deleted > 0) {
     $app.logger().info("Deleted old checked-off items", "count", deleted);
+  }
+  const released = items.releaseExpiredClaims($app);
+  if (released > 0) {
+    $app.logger().info("Released expired claims", "count", released);
   }
 });
 
 // Runs the same cleanup on demand. The tests use it so they don't have to wait
 // for the hourly schedule.
 routerAdd("POST", "/api/einkauf/cleanup", (e) => {
-  const deleted = require(`${__hooks}/items.js`).deleteOldCheckedItems(e.app);
-  return e.json(200, { deleted });
+  const items = require(`${__hooks}/items.js`);
+  const deleted = items.deleteOldCheckedItems(e.app);
+  const released = items.releaseExpiredClaims(e.app);
+  return e.json(200, { deleted, released });
 }, $apis.requireSuperuserAuth());

@@ -12,6 +12,8 @@
   --warn: #b7791f;
   --notice: #fff4d6;
   --notice-text: #5c4300;
+  /* Claimed items; blue, because the app uses no blue for anything else. */
+  --claim: #2f6fb3;
   --radius: 0.75rem;
   --tap: 2.75rem;
 }
@@ -30,6 +32,7 @@
     --warn: #e5b85c;
     --notice: #3a3014;
     --notice-text: #f3dc9a;
+    --claim: #6fa8e6;
   }
 }
 
@@ -500,6 +503,24 @@ main {
   opacity: 0.7;
 }
 
+/* A claimed row gets a soft background; one's own claim a bit stronger, so
+   it stands out from someone else's. The padding and the negative margin
+   cancel out, so the content does not move when a row is claimed. */
+.item[data-claim] {
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.item[data-claim="other"] {
+  background: color-mix(in srgb, var(--claim) 9%, transparent);
+}
+
+.item[data-claim="mine"] {
+  background: color-mix(in srgb, var(--claim) 18%, transparent);
+}
+
+.claim,
 .edit,
 .delete {
   flex: none;
@@ -511,6 +532,7 @@ main {
   color: var(--muted);
 }
 
+.claim svg,
 .edit svg,
 .delete svg {
   width: 1.25rem;
@@ -520,6 +542,15 @@ main {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* The hand is filled while the item is claimed, by anyone. */
+.item[data-claim] .claim {
+  color: var(--claim);
+}
+
+.item[data-claim] .claim svg {
+  fill: color-mix(in srgb, currentColor 35%, transparent);
 }
 
 .empty {

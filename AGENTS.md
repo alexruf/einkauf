@@ -74,7 +74,8 @@ Project rules:
   `test`/`expect` from `tests/support/e2e.mjs` (fixtures `annaPage`,
   `benPage` via cuttable proxies; offline only via `goOffline`/`goOnline`,
   `setOffline` alone leaks requests). Password logins in e2e share one
-  10/min bucket; use `openAs` (impersonation) unless testing login.
+  10/min bucket; use `openAs` (impersonation) unless testing login. The
+  e2e server raises only the general `/api/` limit (`global-setup.mjs`).
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
   DOM-free modules (`ids`, `storage`, `app-name`, `outbox`, `view`, `sync`,
   `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,

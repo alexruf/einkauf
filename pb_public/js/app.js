@@ -147,6 +147,7 @@ function render() {
     li.dataset.id = row.id;
     li.classList.toggle('is-checked', row.checked);
     li.classList.toggle('is-pending', row.pending);
+    if (row.claim) li.dataset.claim = row.claim;
     // Item text is user input: only ever set it as text, never as HTML.
     li.querySelector('.text').textContent = row.text;
     li.querySelector('.meta').textContent = row.meta;
@@ -158,6 +159,13 @@ function render() {
     del.title = connection === 'online' ? 'Löschen' : 'Löschen ist nur online möglich';
     del.addEventListener('click', () => requestDelete(row));
     li.querySelector('.edit').addEventListener('click', () => requestEdit(row));
+    const claim = li.querySelector('.claim');
+    claim.hidden = row.checked;
+    const claimLabel = claimButtonLabel(row);
+    claim.setAttribute('aria-label', claimLabel);
+    claim.title = claimLabel;
+    // A tap removes any claim, whoever made it, and claims an unclaimed item.
+    claim.addEventListener('click', () => setClaimed(row.id, !row.claim));
     return li;
   });
   $('items').replaceChildren(...elements);
@@ -170,7 +178,7 @@ function render() {
   // Re-rendering replaces the rows; keep keyboard focus where it was.
   if (focusedId) {
     const li = $('items').querySelector(`[data-id="${CSS.escape(focusedId)}"]`);
-    const target = li?.querySelector(focusedClass === 'delete' || focusedClass === 'edit' ? `.${focusedClass}` : 'input');
+    const target = li?.querySelector(['claim', 'edit', 'delete'].includes(focusedClass) ? `.${focusedClass}` : 'input');
     target?.focus();
   }
 }
@@ -185,6 +193,19 @@ function setChecked(id, checked) {
   outbox.add({ type: 'setChecked', id, checked });
   render();
   flush();
+}
+
+function setClaimed(id, claimed) {
+  outbox.add({ type: 'setClaimed', id, claimed });
+  render();
+  flush();
+}
+
+// Says what a tap on the claim button does.
+function claimButtonLabel(row) {
+  if (row.claim === 'mine') return 'Markierung entfernen';
+  if (row.claim === 'other') return `Markierung von ${row.claimant} entfernen`;
+  return 'Besorge ich';
 }
 
 function requestEdit(row) {
