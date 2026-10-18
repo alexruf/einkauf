@@ -76,6 +76,38 @@ test('given a pending check-off of an item no longer on the server, then it is n
   assert.deepEqual(buildRows({ users, items: [] }, ops, 'anna'), []);
 });
 
+test('given a pending text change, then the item shows the new text, pending and last changed by me', () => {
+  const snapshot = { users, items: [item('milch', { text: 'Milch' })] };
+  const ops = [{ type: 'setText', id: 'milch', text: 'Hafermilch', at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows(snapshot, ops, 'ben');
+  assert.equal(row.text, 'Hafermilch');
+  assert.equal(row.pending, true);
+  assert.equal(row.meta, 'von Anna · zuletzt Ben');
+});
+
+test('given a pending text change of a checked item, then it stays checked in its place', () => {
+  const snapshot = { users, items: [item('brot', { text: 'Brot', checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })] };
+  const ops = [{ type: 'setText', id: 'brot', text: 'Vollkornbrot', at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows(snapshot, ops, 'anna');
+  assert.equal(row.checked, true);
+  assert.equal(row.checkedAt, Date.parse('2026-10-17T09:00:00.000Z'));
+});
+
+test('given a pending create that is then edited, then it is shown once with the new text', () => {
+  const ops = [
+    { type: 'create', id: 'eier', text: 'Eier', at: '2026-10-17T10:00:00.000Z' },
+    { type: 'setText', id: 'eier', text: 'Eier 10x', at: '2026-10-17T10:01:00.000Z' },
+  ];
+  const rows = buildRows({ users, items: [] }, ops, 'anna');
+  assert.deepEqual(texts(rows), ['Eier 10x']);
+  assert.equal(rows[0].pending, true);
+});
+
+test('given a pending text change of an item no longer on the server, then it is not shown', () => {
+  const ops = [{ type: 'setText', id: 'gone', text: 'Neu', at: '2026-10-17T10:00:00.000Z' }];
+  assert.deepEqual(buildRows({ users, items: [] }, ops, 'anna'), []);
+});
+
 test('given a pending create the server already has, then the item is shown once and not pending', () => {
   const snapshot = { users, items: [item('eier')] };
   const ops = [{ type: 'create', id: 'eier', text: 'eier', at: '2026-10-17T10:00:00.000Z' }];

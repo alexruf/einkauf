@@ -157,15 +157,20 @@ function render() {
     del.disabled = connection !== 'online' || row.pending;
     del.title = connection === 'online' ? 'Löschen' : 'Löschen ist nur online möglich';
     del.addEventListener('click', () => requestDelete(row));
+    li.querySelector('.edit').addEventListener('click', () => requestEdit(row));
     return li;
   });
   $('items').replaceChildren(...elements);
   $('empty').hidden = rows.length > 0;
 
+  // An item deleted by someone else cannot be edited any more.
+  const editDialog = $('edit-item');
+  if (editDialog.open && !rows.some((row) => row.id === editDialog.dataset.id)) editDialog.close();
+
   // Re-rendering replaces the rows; keep keyboard focus where it was.
   if (focusedId) {
     const li = $('items').querySelector(`[data-id="${CSS.escape(focusedId)}"]`);
-    const target = focusedClass === 'delete' ? li?.querySelector('.delete') : li?.querySelector('input');
+    const target = li?.querySelector(focusedClass === 'delete' || focusedClass === 'edit' ? `.${focusedClass}` : 'input');
     target?.focus();
   }
 }
@@ -178,6 +183,33 @@ function addItem(text) {
 
 function setChecked(id, checked) {
   outbox.add({ type: 'setChecked', id, checked });
+  render();
+  flush();
+}
+
+function requestEdit(row) {
+  const dialog = $('edit-item');
+  const input = $('edit-text');
+  input.value = row.text;
+  dialog.dataset.id = row.id;
+  dialog.returnValue = '';
+  dialog.addEventListener(
+    'close',
+    () => {
+      if (dialog.returnValue === 'save') setText(row.id, input.value);
+    },
+    { once: true },
+  );
+  dialog.showModal();
+}
+
+// Compares with the item as shown now, not when the dialog opened, so that
+// saving an unchanged text does not make the user the last editor.
+function setText(id, value) {
+  const text = value.trim();
+  const current = buildRows(store.get('snapshot'), outbox.list(), currentUser().id).find((row) => row.id === id);
+  if (!text || !current || current.text === text) return;
+  outbox.add({ type: 'setText', id, text });
   render();
   flush();
 }
@@ -349,6 +381,7 @@ $('add-form').addEventListener('submit', (event) => {
 });
 
 $('logout').addEventListener('click', requestLogout);
+$('edit-cancel').addEventListener('click', () => $('edit-item').close());
 
 window.addEventListener('online', () => currentUser() && flush());
 // The browser knowing it is offline is reliable; it claiming to be online

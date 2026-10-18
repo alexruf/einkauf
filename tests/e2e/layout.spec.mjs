@@ -29,6 +29,13 @@ test.describe('on a 360 px wide phone', () => {
       expect(box.height, `height of ${name}`).toBeGreaterThanOrEqual(44);
     }
 
+    // Next to the edit and delete buttons, the check-off area takes the
+    // rest of the row.
+    const rowBox = await row(page, 'Milch').boundingBox();
+    const toggleBox = await row(page, 'Milch').locator('label.toggle').boundingBox();
+    const buttonsWidth = await row(page, 'Milch').locator('button').evaluateAll((els) => els.reduce((sum, el) => sum + el.offsetWidth, 0));
+    expect(toggleBox.width).toBeGreaterThanOrEqual(rowBox.width - buttonsWidth - 16);
+
     // Tapping the text, far from the small checkbox, toggles the row.
     await row(page, 'Milch').locator('.text').tap();
     await expect(row(page, 'Milch').getByRole('checkbox')).toBeChecked();

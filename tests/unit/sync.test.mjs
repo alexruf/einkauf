@@ -14,6 +14,7 @@ const httpError = (status) => Object.assign(new Error(`HTTP ${status}`), { statu
 function fakePb({ items = [], users = [], failures = {} } = {}) {
   const server = new Map(items.map((i) => [i.id, { ...i }]));
   const calls = [];
+  const updates = [];
   const fail = (key) => {
     const error = failures[key];
     if (error) {
@@ -33,6 +34,7 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
       },
       async update(id, data) {
         calls.push(['update', id, data.checked]);
+        updates.push([id, data]);
         fail(`update:${id}`);
         if (!server.has(id)) throw httpError(404);
         Object.assign(server.get(id), data);
@@ -57,7 +59,7 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
       },
     },
   };
-  return { pb: { collection: (name) => collections[name] }, server, calls };
+  return { pb: { collection: (name) => collections[name] }, server, calls, updates };
 }
 
 function setup(pbOptions, { now } = {}) {
@@ -161,6 +163,42 @@ test('given another client error, when flushing, then the change is dropped with
   assert.equal(await sync.flush(), 'done');
   assert.deepEqual(events.rejected.map((op) => op.id), ['a']);
   assert.equal(server.get('b').checked, true);
+});
+
+test('given a pending text change, when flushing, then only the text is sent and stored', async () => {
+  const { sync, outbox, server, updates } = setup({ items: [{ id: 'milch', text: 'Milch', checked: true }] });
+  outbox.add({ type: 'setText', id: 'milch', text: 'Hafermilch' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(updates, [['milch', { text: 'Hafermilch' }]]);
+  assert.equal(server.get('milch').text, 'Hafermilch');
+  assert.equal(server.get('milch').checked, true);
+  assert.deepEqual(outbox.list(), []);
+});
+
+test('given a text change of an item deleted on the server, when flushing, then it is dropped and the rest is sent', async () => {
+  const { sync, outbox, server, events } = setup({ items: [{ id: 'brot', text: 'Brot' }] });
+  outbox.add({ type: 'setText', id: 'milch', text: 'Hafermilch' });
+  outbox.add({ type: 'setText', id: 'brot', text: 'Vollkornbrot' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(outbox.list(), []);
+  assert.equal(server.get('brot').text, 'Vollkornbrot');
+  assert.deepEqual(events.rejected, []);
+});
+
+test('given a text change the server refuses, when flushing, then it is dropped with a notice and the rest is sent', async () => {
+  const { sync, outbox, server, events } = setup({
+    items: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }],
+    failures: { 'update:a': httpError(400) },
+  });
+  outbox.add({ type: 'setText', id: 'a', text: 'x'.repeat(201) });
+  outbox.add({ type: 'setText', id: 'b', text: 'B2' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(events.rejected.map((op) => op.id), ['a']);
+  assert.equal(server.get('a').text, 'A');
+  assert.equal(server.get('b').text, 'B2');
 });
 
 test('given the server is busy, when flushing, then it stops and keeps the change for later', async () => {

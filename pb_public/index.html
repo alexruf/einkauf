@@ -101,6 +101,20 @@
     </form>
   </dialog>
 
+  <!-- "Abbrechen" is not a submit button, so Enter in the text field saves. -->
+  <dialog class="confirm" id="edit-item">
+    <form method="dialog">
+      <label class="edit-label">
+        Eintrag
+        <input type="text" id="edit-text" maxlength="200" autocomplete="off" enterkeyhint="done">
+      </label>
+      <div class="actions">
+        <button type="button" id="edit-cancel">Abbrechen</button>
+        <button type="submit" value="save" class="primary">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="confirm" id="confirm-logout">
     <form method="dialog">
       <p id="logout-question"></p>
@@ -121,6 +135,9 @@
           <span class="pending">nicht synchronisiert</span>
         </span>
       </label>
+      <button type="button" class="edit" aria-label="Bearbeiten" title="Bearbeiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4"/></svg>
+      </button>
       <button type="button" class="delete" aria-label="Löschen">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>

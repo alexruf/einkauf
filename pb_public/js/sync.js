@@ -13,7 +13,7 @@ function classify(op, error) {
   // Too many requests or a server problem: the change itself is fine, so keep
   // it and try again on the next trigger.
   if (status === 429 || status >= 500) return 'retry';
-  if (status === 404 && op.type === 'setChecked') return 'deleted';
+  if (status === 404 && (op.type === 'setChecked' || op.type === 'setText')) return 'deleted';
   if (status === 400 && op.type === 'create') return 'maybe-duplicate';
   return 'rejected';
 }
@@ -43,6 +43,8 @@ export function createSync({
       await items().create({ id: op.id, text: op.text });
     } else if (op.type === 'setChecked') {
       await items().update(op.id, { checked: op.checked });
+    } else if (op.type === 'setText') {
+      await items().update(op.id, { text: op.text });
     } else {
       throw new Error(`Unknown outbox operation: ${JSON.stringify(op)}`);
     }

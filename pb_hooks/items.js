@@ -8,8 +8,8 @@
 function applyMemberWrite(record, auth, isCreate) {
   const original = isCreate ? null : record.original();
 
+  record.set("text", record.getString("text").trim());
   if (isCreate) {
-    record.set("text", record.getString("text").trim());
     record.set("createdBy", auth.id);
   } else {
     record.set("createdBy", original.getString("createdBy"));

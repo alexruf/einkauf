@@ -75,6 +75,28 @@ test('given whitespace-only text, when creating an item, then it is refused', as
   assert.equal(res.status, 400);
 });
 
+test('given text with surrounding whitespace, when changing an item, then the text is trimmed', async () => {
+  const item = (await createItem(anna, { text: 'Käse' })).body;
+  const res = await updateItem(anna, item.id, { text: ' Bergkäse ' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.text, 'Bergkäse');
+});
+
+test('given whitespace-only text, when changing an item, then it is refused and the text is unchanged', async () => {
+  const item = (await createItem(anna, { text: 'Honig' })).body;
+  const res = await updateItem(anna, item.id, { text: '   ' });
+  assert.equal(res.status, 400);
+  assert.equal((await getItem(item.id)).body.text, 'Honig');
+});
+
+test('given Anna created an item, when Ben changes its text claiming Anna, then Anna stays creator and Ben is last editor', async () => {
+  const item = (await createItem(anna, { text: 'Brot' })).body;
+  const res = await updateItem(ben, item.id, { text: 'Vollkornbrot', createdBy: ben.id, updatedBy: anna.id });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.createdBy, anna.id);
+  assert.equal(res.body.updatedBy, ben.id);
+});
+
 test('given the superuser, when it sets checkedAt, then the value is kept', async () => {
   const item = (await createItem(anna, { text: 'Mehl' })).body;
   const res = await api(server.url, `${ITEMS}/${item.id}`, {

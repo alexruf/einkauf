@@ -13,9 +13,9 @@ PocketBase runs as the standalone binary. The repository holds only what PocketB
 
 ## How the app works
 
-Every family member logs in with their own account and sees the same shared list. Items can be added, checked off and un-checked, and each item shows who added it and who changed it last. Checked-off items are deleted automatically 24 hours after they were checked off. Changes made by others appear live.
+Every family member logs in with their own account and sees the same shared list. Items can be added, edited, checked off and un-checked, and each item shows who added it and who changed it last. Checked-off items are deleted automatically 24 hours after they were checked off. Changes made by others appear live.
 
-The app also works without a connection, which is common inside shops. It opens with the last known list, and items can be added, checked off and un-checked offline. These changes are marked as not yet synchronized and are sent as soon as the connection returns. Deleting needs a connection.
+The app also works without a connection, which is common inside shops. It opens with the last known list, and items can be added, edited, checked off and un-checked offline. These changes are marked as not yet synchronized and are sent as soon as the connection returns. If two people change the same item, the change that reaches the server last wins. Deleting needs a connection.
 
 Logging out removes the list and any unsent changes from the device. If only the session expired, unsent changes are kept until the same person logs in again. They are discarded if someone else logs in on that device, so they are never sent under the wrong name.
 
@@ -116,7 +116,7 @@ Checklist:
 2. **Login:** a wrong password shows "E-Mail oder Passwort ist falsch."; after logging in, the header shows your display name and no email address appears anywhere.
 3. **Live updates:** an item added on one phone appears on the other within a few seconds, with "von <name>". Checking it off shows "zuletzt <name>" on the other phone.
 4. **Phone layout:** the keyboard does not cover the input field; every button and row is easy to hit with a thumb; nothing scrolls sideways. Check light and dark mode.
-5. **Airplane mode:** switch on airplane mode, close the app completely and open it from the home screen. The list appears with the offline hint. Add an item and check one off; both are marked "nicht synchronisiert" and the delete buttons are disabled. Close and reopen the app; the changes are still there.
+5. **Airplane mode:** switch on airplane mode, close the app completely and open it from the home screen. The list appears with the offline hint. Add an item, edit one and check one off; all three are marked "nicht synchronisiert" and the delete buttons are disabled. Close and reopen the app; the changes are still there.
 6. **Back online:** switch airplane mode off with the app open. Within a few seconds the marks disappear, and the other phone shows both changes.
 7. **In a shop:** open the app where the signal is weak. The list appears after at most about three seconds.
 8. **Logout:** log out, switch on airplane mode and open the app. Only the login screen appears, with no list.

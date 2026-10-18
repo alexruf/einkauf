@@ -40,6 +40,8 @@ export function buildRows(snapshot, ops, me) {
         updatedBy: me,
         pending: true,
       });
+    } else if (op.type === 'setText' && item) {
+      byId.set(op.id, { ...item, text: op.text, updatedBy: me, pending: true });
     }
   }
 

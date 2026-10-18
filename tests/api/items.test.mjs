@@ -43,22 +43,36 @@ test('given a family member, when creating an item with 201 characters, then it 
   assert.ok(res.body.data.text);
 });
 
-test('given an item, when a family member changes its text, then it is refused and the text is unchanged', async () => {
+const updateItem = (id, body) => api(server.url, `${ITEMS}/${id}`, { method: 'PATCH', token: anna.token, body });
+
+test('given an item, when a family member changes its text, then the new text is stored', async () => {
   const item = (await createItem({ text: 'Brot' })).body;
-  const res = await api(server.url, `${ITEMS}/${item.id}`, { method: 'PATCH', token: anna.token, body: { text: 'Kuchen' } });
-  assert.equal(res.status, 404);
-  assert.equal((await getItem(item.id)).body.text, 'Brot');
+  const res = await updateItem(item.id, { text: 'Kuchen' });
+  assert.equal(res.status, 200);
+  assert.equal((await getItem(item.id)).body.text, 'Kuchen');
 });
 
-test('given an item, when a family member sends checked together with text, then it is refused', async () => {
+test('given an item, when a family member sends checked together with text, then both are stored', async () => {
   const item = (await createItem({ text: 'Käse' })).body;
-  const res = await api(server.url, `${ITEMS}/${item.id}`, {
-    method: 'PATCH',
-    token: anna.token,
-    body: { checked: true, text: 'Käse' },
-  });
-  assert.equal(res.status, 404);
-  assert.equal((await getItem(item.id)).body.checked, false);
+  const res = await updateItem(item.id, { checked: true, text: 'Bergkäse' });
+  assert.equal(res.status, 200);
+  const stored = (await getItem(item.id)).body;
+  assert.equal(stored.checked, true);
+  assert.equal(stored.text, 'Bergkäse');
+});
+
+test('given a checked item, when a family member changes only its text, then it stays checked', async () => {
+  const item = (await createItem({ text: 'Quark', checked: true })).body;
+  const res = await updateItem(item.id, { text: 'Magerquark' });
+  assert.equal(res.status, 200);
+  assert.equal((await getItem(item.id)).body.checked, true);
+});
+
+test('given an item, when a family member changes its text to 201 characters, then it is refused and the text is unchanged', async () => {
+  const item = (await createItem({ text: 'Senf' })).body;
+  const res = await updateItem(item.id, { text: 'x'.repeat(201) });
+  assert.equal(res.status, 400);
+  assert.equal((await getItem(item.id)).body.text, 'Senf');
 });
 
 test('given an item, when a family member checks it off, then it is checked', async () => {
