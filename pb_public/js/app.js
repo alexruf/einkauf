@@ -4,6 +4,7 @@
 import PocketBase from '/vendor/pocketbase.es.mjs';
 import { newId } from './ids.js';
 import { createStore } from './storage.js';
+import { createAppName } from './app-name.js';
 import { createOutbox } from './outbox.js';
 import { buildRows } from './view.js';
 import { createSync } from './sync.js';
@@ -15,6 +16,7 @@ const pb = new PocketBase('/');
 // overlapping list reloads into errors.
 pb.autoCancellation(false);
 
+const appName = createAppName(localStorage);
 const store = createStore(localStorage);
 const outbox = createOutbox(store);
 const sync = createSync({
@@ -36,6 +38,23 @@ let noticeTimer;
 const currentUser = () => (pb.authStore.isValid && pb.authStore.record?.collectionName === 'users' ? pb.authStore.record : null);
 
 // Screens
+
+function showAppName() {
+  $('app-name').textContent = appName.get();
+  document.title = appName.get();
+}
+
+// Without a connection the remembered name stays. That is not worth a
+// message, because the connection state is already shown.
+async function loadAppName() {
+  try {
+    const { name } = await pb.send('/api/einkauf/app-name', {});
+    appName.remember(name);
+    showAppName();
+  } catch (error) {
+    console.warn('Loading the app name failed', error);
+  }
+}
 
 function showLogin(hint = '') {
   $('list-screen').hidden = true;
@@ -297,6 +316,9 @@ document.addEventListener('visibilitychange', () => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch((error) => console.error('Service worker registration failed', error));
 }
+
+showAppName();
+loadAppName();
 
 const user = currentUser();
 if (user) {

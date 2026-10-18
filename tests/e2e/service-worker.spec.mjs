@@ -64,11 +64,15 @@ test.describe('after a deployment', () => {
     await page.reload();
     await waitForServiceWorker(page);
     await page.reload();
-    await expect(page).toHaveTitle('Einkauf');
+    await expect(page.locator('#list-screen')).toBeVisible();
+    const marker = page.locator('#deployed');
+    await expect(marker).toHaveCount(0);
 
+    // The marker is an element the app's script never touches, unlike the
+    // title, which the app sets to the configured name.
     const indexPath = join(publicDir, 'index.html');
     const html = await readFile(indexPath, 'utf8');
-    await writeFile(indexPath, html.replace('<title>Einkauf</title>', '<title>Einkauf (neu)</title>'));
+    await writeFile(indexPath, html.replace('</body>', '<p id="deployed">neu</p></body>'));
     // PocketBase only sends Last-Modified with whole seconds, so a file changed
     // within the second of the last request would be answered with 304. A real
     // deployment changes files much later; make that explicit.
@@ -76,12 +80,12 @@ test.describe('after a deployment', () => {
     await utimes(indexPath, later, later);
 
     await page.reload();
-    await expect(page).toHaveTitle('Einkauf (neu)');
+    await expect(marker).toHaveText('neu');
 
     // The cache now holds the new version too.
     await page.context().setOffline(true);
     await page.reload();
-    await expect(page).toHaveTitle('Einkauf (neu)');
+    await expect(marker).toHaveText('neu');
     await page.context().setOffline(false);
   });
 });

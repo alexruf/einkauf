@@ -14,6 +14,7 @@ const SHELL = [
   '/app.css',
   '/manifest.webmanifest',
   '/js/app.js',
+  '/js/app-name.js',
   '/js/ids.js',
   '/js/outbox.js',
   '/js/storage.js',

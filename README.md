@@ -29,6 +29,12 @@ There is no self-registration. The administrator creates one account per family 
 
 Family members can see each other's display names but not their email addresses. Deleting an account keeps the items that person added; the app then shows "Unbekannt" as their author.
 
+## App name
+
+The name in the app's header and browser tab comes from **Application name** in the admin UI settings (`/_/`, Settings, Application). New installations start with "Einkauf". After a change, the app shows the new name the next time it starts. It remembers the last name it saw, so the name also stays correct offline.
+
+The name under the icon of an installed app is a different thing. It comes from `pb_public/manifest.webmanifest`, and phones read it only once, when the app is added to the home screen.
+
 ## Installing the app on a phone
 
 Open the app in the phone's browser, log in, and add it to the home screen. It then starts in its own window like a native app.

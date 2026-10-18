@@ -71,12 +71,13 @@ Project rules:
   `setOffline` alone leaks requests). Password logins in e2e share one
   10/min bucket; use `openAs` (impersonation) unless testing login.
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
-  DOM-free modules (`ids`, `storage`, `outbox`, `view`, `sync`) with unit
-  tests. All writes go through the outbox. New files in `pb_public/` must be
+  DOM-free modules (`ids`, `storage`, `app-name`, `outbox`, `view`, `sync`)
+  with unit tests. All writes go through the outbox. New files in `pb_public/` must be
   added to `SHELL` in `sw.js` (a test enforces it). CSP is a meta tag in
   `index.html`: no inline scripts/styles, item text only via `textContent`.
 - **Server logic:** item hooks in `pb_hooks/items.pb.js`, cleanup cron and
-  route in `pb_hooks/cleanup.pb.js`; shared code in `pb_hooks/items.js`
+  route in `pb_hooks/cleanup.pb.js`, public app-name route in
+  `pb_hooks/app-name.pb.js`; shared code in `pb_hooks/items.js`
   loaded with `require()` inside each handler.
 
 ## Development Guidelines
