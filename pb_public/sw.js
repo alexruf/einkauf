@@ -78,12 +78,19 @@ self.addEventListener('fetch', (event) => {
 
 async function networkFirst(event, request) {
   const cache = await caches.open(CACHE);
+  // The cache is keyed by URL alone, never by the request object. PocketBase
+  // answers with "Vary: Origin", so a cached file only matches requests with
+  // the same Origin header. The install stores files without one, but the
+  // browser sends one for module scripts and fonts, so those would miss the
+  // install's copy, and an app opened offline after its first visit would
+  // not start.
+  const key = request.url;
   // "no-cache" revalidates with the server instead of trusting the browser's
   // HTTP cache, which could otherwise hand out an old file.
   const network = fetch(request, { cache: 'no-cache' }).then((response) => {
     if (response.ok) {
       const copy = response.clone();
-      event.waitUntil(cache.put(request, copy));
+      event.waitUntil(cache.put(key, copy));
     }
     return response;
   });
@@ -94,7 +101,7 @@ async function networkFirst(event, request) {
 
   // Navigations to any path show the app, like PocketBase's index fallback.
   const cached =
-    (await cache.match(request, { ignoreSearch: true })) ??
+    (await cache.match(key, { ignoreSearch: true })) ??
     (request.mode === 'navigate' ? await cache.match('/') : undefined);
   if (cached) return cached;
   // Nothing cached: keep waiting for the network, or fail like it does.

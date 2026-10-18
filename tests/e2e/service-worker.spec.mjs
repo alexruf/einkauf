@@ -44,6 +44,20 @@ test('given the list was opened online, when the app is opened offline, then it 
   await goOnline(annaPage);
 });
 
+test('given only the first visit was online, when the app is opened offline, then it starts', async ({ page }) => {
+  // On the first visit the page loads before the Service Worker takes over,
+  // so the cache holds only what the install stored. No reload in between,
+  // because a controlled load would store every file again.
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+
+  await page.context().setOffline(true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+  await page.context().setOffline(false);
+});
+
 test('given a cached file, when it is requested with cache mode "no-store" offline, then the request fails instead of being answered from the cache', async ({
   annaPage,
 }) => {
