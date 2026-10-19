@@ -333,6 +333,31 @@ test('given a pending create followed by its delete, when flushing, then both ar
   assert.deepEqual(outbox.list(), []);
 });
 
+test('given Anna logs out while a change is on its way, when Ben logs in before it arrives, then her other changes are not sent', async () => {
+  const { sync, outbox, store, server, pb } = setup();
+  const items = pb.collection('items');
+  const original = items.create;
+  let arrive;
+  items.create = async (...args) => {
+    items.create = original;
+    await new Promise((resolve) => {
+      arrive = resolve;
+    });
+    return original(...args);
+  };
+  outbox.add({ type: 'create', id: 'eier', text: 'Eier' });
+  outbox.add({ type: 'create', id: 'brot', text: 'Brot' });
+
+  const flushed = sync.flush();
+  store.clear();
+  store.claim('ben');
+  pb.authStore.record = { id: 'ben', collectionName: 'users' };
+  arrive();
+  await flushed;
+
+  assert.deepEqual([...server.keys()], ['eier']);
+});
+
 test('given claimed items on the server, when reloading, then the claim fields are kept in the snapshot', async () => {
   const { sync, store } = setup({
     items: [{ id: 'milch', text: 'Milch', claimedBy: 'ben', claimedAt: '2026-10-18 10:00:00.000Z' }],

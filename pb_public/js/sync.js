@@ -74,9 +74,11 @@ export function createSync({
     }
   }
 
-  // Returns 'done', 'offline', 'auth' or 'retry'.
+  // Returns 'done', 'offline', 'auth' or 'retry'. Takes each change from the
+  // outbox afresh: a logout empties it while a request is on its way, and
+  // the changes it discarded must not go out under whoever logs in next.
   async function sendAll() {
-    for (const op of outbox.list()) {
+    for (let op = outbox.list()[0]; op; op = outbox.list()[0]) {
       try {
         await send(op);
         outbox.remove(op);

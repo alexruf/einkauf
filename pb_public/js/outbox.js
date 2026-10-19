@@ -25,11 +25,11 @@ export function createOutbox(store, { now = () => new Date().toISOString(), make
       return entry;
     },
 
+    // The entry is already gone when a logout discarded the outbox while it
+    // was being sent; the storage may then belong to nobody.
     remove(entry) {
-      store.set(
-        'outbox',
-        list().filter((op) => op.opId !== entry.opId),
-      );
+      const rest = list().filter((op) => op.opId !== entry.opId);
+      if (rest.length < list().length) store.set('outbox', rest);
     },
   };
 }
