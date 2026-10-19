@@ -137,3 +137,28 @@ test('given a token refresh still on its way, when the user logs out, then its a
   await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('pocketbase_auth'))).toBeNull();
 });
+
+test('given the app open in two tabs, when Anna logs out in one and Ben logs in there, then the other tab follows', async ({
+  annaPage,
+}) => {
+  await createItem(anna, 'Milch');
+  await annaPage.reload();
+  const otherTab = await annaPage.context().newPage();
+  await otherTab.goto('/');
+  await expect(row(otherTab, 'Milch')).toBeVisible();
+
+  await logOut(annaPage);
+
+  await expect(otherTab.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+  await expect(otherTab.getByText('Milch')).toHaveCount(0);
+  await expect(otherTab.locator('#user-name')).toBeHidden();
+
+  // Ben logs in in the first tab, stored the way the SDK stores a session.
+  await annaPage.evaluate(
+    ([token, record]) => localStorage.setItem('pocketbase_auth', JSON.stringify({ token, record })),
+    [ben.token, { id: ben.id, name: ben.name, collectionName: 'users', collectionId: '_pb_users_auth_' }],
+  );
+
+  await expect(otherTab.locator('#user-name')).toHaveText('Ben');
+  await expect(row(otherTab, 'Milch')).toBeVisible();
+});

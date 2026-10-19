@@ -84,6 +84,7 @@ async function loadAppName() {
 function showLogin(hint = '') {
   closeAccountMenu();
   if (editing) closeEdit();
+  $('confirm-logout').close();
   lastLayout = null;
   $('list-screen').hidden = true;
   $('account').hidden = true;
@@ -572,7 +573,12 @@ async function refreshAuth() {
   }
 }
 
+// The user whose session runs in this tab, or null. Another tab may log in
+// or out meanwhile; this is what the tab still shows.
+let sessionUserId = null;
+
 function startSession(user) {
+  sessionUserId = user.id;
   // Data on the device that belongs to someone else is discarded here, so
   // their pending changes are never sent under this user's name.
   store.claim(user.id);
@@ -586,14 +592,30 @@ function startSession(user) {
 // again and sync pending changes.
 function endSession(hint) {
   stopSession();
+  pb.authStore.clear();
   showLogin(hint);
 }
 
-// Stops everything that still acts for the session and forgets its token.
+// Stops everything that still acts for the session in this tab. The token
+// stays, because another tab may have just stored a new one.
 function stopSession() {
+  sessionUserId = null;
   refreshing?.abort();
   pb.realtime.unsubscribe().catch(() => {});
-  pb.authStore.clear();
+}
+
+// All tabs of the app share one session: the SDK keeps it in localStorage
+// and updates its auth store when another tab changes it. This tab then
+// leaves the list of a user who logged out there and opens the list of
+// whoever logged in. A refreshed token of the same user changes nothing.
+function followOtherTab() {
+  const user = currentUser();
+  if ((user?.id ?? null) === sessionUserId) return;
+  if (sessionUserId) {
+    stopSession();
+    showLogin();
+  }
+  if (user) startSession(user);
 }
 
 // Browsers without popover support show the menu inline, so there is
@@ -622,6 +644,7 @@ function requestLogout() {
 
 function logout() {
   stopSession();
+  pb.authStore.clear();
   store.clear();
   showLogin();
 }
@@ -726,6 +749,12 @@ document.addEventListener('visibilitychange', () => {
   // The app may be closed or frozen in the background; up to here the list
   // was current.
   else if (connection === 'online') sync.markSynced();
+});
+
+// Only other tabs fire this event. The SDK's own listener was added first,
+// so its auth store is already up to date here.
+window.addEventListener('storage', (event) => {
+  if (event.key === pb.authStore.storageKey) followOtherTab();
 });
 
 if ('serviceWorker' in navigator) {
