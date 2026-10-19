@@ -10,6 +10,10 @@ cronAdd("einkauf_cleanup", "0 * * * *", () => {
   if (released > 0) {
     $app.logger().info("Released expired claims", "count", released);
   }
+  const expired = require(`${__hooks}/purchases.js`).expirePurchases($app);
+  if (expired > 0) {
+    $app.logger().info("Deleted old purchases", "count", expired);
+  }
 });
 
 // Runs the same cleanup on demand. The tests use it so they don't have to wait
@@ -21,7 +25,8 @@ routerAdd(
     const items = require(`${__hooks}/items.js`);
     const deleted = items.deleteOldCheckedItems(e.app);
     const released = items.releaseExpiredClaims(e.app);
-    return e.json(200, { deleted, released });
+    const expired = require(`${__hooks}/purchases.js`).expirePurchases(e.app);
+    return e.json(200, { deleted, released, expired });
   },
   $apis.requireSuperuserAuth(),
 );

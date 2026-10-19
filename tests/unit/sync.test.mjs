@@ -11,7 +11,7 @@ const httpError = (status) => Object.assign(new Error(`HTTP ${status}`), { statu
 
 // A fake PocketBase client backed by a map of items. `failures` maps a call
 // such as "update:milch" to the error that call throws, once.
-function fakePb({ items = [], users = [], failures = {} } = {}) {
+function fakePb({ items = [], users = [], purchases = [], failures = {} } = {}) {
   const server = new Map(items.map((i) => [i.id, { ...i }]));
   const calls = [];
   const updates = [];
@@ -70,6 +70,15 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
       async getFullList() {
         calls.push(['listUsers']);
         return users;
+      },
+    },
+    // `purchases` may also be a function returning a promise, so a test can
+    // hold the response back like a slow connection.
+    purchases: {
+      async getFullList() {
+        calls.push(['listPurchases']);
+        fail('listPurchases');
+        return typeof purchases === 'function' ? purchases() : purchases;
       },
     },
   };
@@ -359,6 +368,119 @@ test('given a successful flush, then items and user names are reloaded into the 
   assert.deepEqual(snapshot.items.map((i) => i.id).sort(), ['eier', 'milch']);
   assert.equal(snapshot.items[0].extra, undefined);
   assert.deepEqual(snapshot.users, [{ id: 'anna', name: 'Anna' }]);
+});
+
+// Purchases load in the background after a flush; this lets them arrive.
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test('given purchases on the server, when reloading, then their id, text and count are stored in the snapshot', async () => {
+  const { sync, store } = setup({
+    purchases: [{ id: 'p1', key: 'milch', text: 'Milch', count: 4, lastAt: '2026-10-18 10:00:00.000Z' }],
+  });
+
+  await sync.flush();
+  await settle();
+  assert.deepEqual(store.get('snapshot').purchases, [{ id: 'p1', text: 'Milch', count: 4 }]);
+});
+
+for (const [name, error] of [
+  ['the network fails', httpError(0)],
+  ['the server fails', httpError(500)],
+  ['the collection is missing', httpError(404)],
+]) {
+  test(`given loading purchases fails because ${name}, when flushing, then the list is synchronized and the old purchases stay`, async () => {
+    const { sync, store, events } = setup({
+      items: [{ id: 'milch', text: 'Milch' }],
+      failures: { listPurchases: error },
+    });
+    store.set('snapshot', { items: [], users: [], purchases: [{ id: 'p1', text: 'Brot', count: 2 }] });
+
+    assert.equal(await sync.flush(), 'done');
+    await settle();
+
+    const snapshot = store.get('snapshot');
+    assert.deepEqual(
+      snapshot.items.map((i) => i.id),
+      ['milch'],
+    );
+    assert.deepEqual(snapshot.purchases, [{ id: 'p1', text: 'Brot', count: 2 }]);
+    assert.equal(events.offline, 0);
+    assert.deepEqual(events.rejected, []);
+  });
+}
+
+test('given purchases load slowly, when flushing, then the list is synchronized without waiting for them', async () => {
+  let respond;
+  const { sync, store, calls } = setup({
+    items: [{ id: 'milch', text: 'Milch' }],
+    purchases: () =>
+      new Promise((resolve) => {
+        respond = resolve;
+      }),
+  });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(
+    store.get('snapshot').items.map((i) => i.id),
+    ['milch'],
+  );
+
+  // A second flush while the first purchases request still hangs starts no
+  // second one, so slow requests do not pile up.
+  await sync.flush();
+  assert.equal(calls.filter(([name]) => name === 'listPurchases').length, 1);
+
+  respond([{ id: 'p1', text: 'Milch', count: 1 }]);
+  await settle();
+  assert.deepEqual(store.get('snapshot').purchases, [{ id: 'p1', text: 'Milch', count: 1 }]);
+});
+
+test('given purchases arrive, then only the purchases callback runs, not a redraw of the list', async () => {
+  const fake = fakePb({ purchases: [{ id: 'p1', text: 'Milch', count: 1 }] });
+  const store = createStore(new MemoryStorage());
+  store.claim('anna');
+  const calls = { change: 0, purchases: 0 };
+  const sync = createSync({
+    pb: fake.pb,
+    store,
+    outbox: createOutbox(store),
+    onChange: () => calls.change++,
+    onPurchases: () => calls.purchases++,
+  });
+
+  await sync.flush();
+  const changesAfterFlush = calls.change;
+  await settle();
+
+  assert.equal(calls.purchases, 1);
+  assert.equal(calls.change, changesAfterFlush);
+});
+
+test('given the user logs out while purchases load, when they arrive, then nothing is stored', async () => {
+  let respond;
+  const { sync, store } = setup({
+    purchases: () =>
+      new Promise((resolve) => {
+        respond = resolve;
+      }),
+  });
+  await sync.flush();
+
+  store.clear();
+  respond([{ id: 'p1', text: 'Milch', count: 1 }]);
+  await settle();
+  assert.equal(store.get('snapshot'), undefined);
+});
+
+test('given purchases in the snapshot, when realtime item events arrive, then the purchases are kept', async () => {
+  const { sync, store } = setup({ purchases: [{ id: 'p1', text: 'Milch', count: 4 }] });
+  await sync.flush();
+  await settle();
+
+  sync.applyEvent({ action: 'create', record: { id: 'brot', text: 'Brot', checked: false } });
+  sync.applyEvent({ action: 'delete', record: { id: 'brot' } });
+
+  assert.deepEqual(store.get('snapshot').purchases, [{ id: 'p1', text: 'Milch', count: 4 }]);
 });
 
 test('given a flush in progress, when another flush is requested, then the new change is sent too', async () => {

@@ -38,6 +38,8 @@ export function createSync({
   onOffline = () => {},
   onAuthError = () => {},
   onRejected = () => {},
+  // Purchases only feed the suggestions, so they do not redraw the list.
+  onPurchases = () => {},
   now = () => new Date().toISOString(),
 }) {
   const items = () => pb.collection('items');
@@ -113,6 +115,8 @@ export function createSync({
 
   // Loads the whole list and the family's names. The list is small, so this
   // is simpler than tracking changes and also covers events missed offline.
+  // The purchases behind the suggestions load separately afterwards, so they
+  // never hold up or break the list.
   async function reload() {
     eventsDuringReload = [];
     try {
@@ -120,12 +124,40 @@ export function createSync({
         items().getFullList({ sort: 'created', fields: ITEM_FIELDS }),
         pb.collection('users').getFullList({ fields: 'id,name' }),
       ]);
-      let snapshot = { items: itemRecords.map(pickItem), users: users.map(({ id, name }) => ({ id, name })) };
+      let snapshot = {
+        items: itemRecords.map(pickItem),
+        users: users.map(({ id, name }) => ({ id, name })),
+        purchases: store.get('snapshot')?.purchases ?? [],
+      };
       for (const event of eventsDuringReload) snapshot = withEvent(snapshot, event);
       store.set('snapshot', snapshot);
       markSynced();
     } finally {
       eventsDuringReload = null;
+    }
+    loadPurchases();
+  }
+
+  // Set while purchases are loading, so a slow connection does not collect
+  // a pile of identical requests.
+  let loadingPurchases = false;
+
+  // Suggestions are a convenience: when loading fails, the device keeps the
+  // purchases it already has and nobody is told.
+  async function loadPurchases() {
+    if (loadingPurchases) return;
+    loadingPurchases = true;
+    try {
+      const records = await pb.collection('purchases').getFullList({ fields: 'id,text,count' });
+      const snapshot = store.get('snapshot');
+      // A slow response after logout must not put data back on the device.
+      if (!snapshot) return;
+      store.set('snapshot', { ...snapshot, purchases: records.map(({ id, text, count }) => ({ id, text, count })) });
+      onPurchases();
+    } catch (error) {
+      console.warn('Loading purchases for suggestions failed; keeping the previous ones', error);
+    } finally {
+      loadingPurchases = false;
     }
   }
 

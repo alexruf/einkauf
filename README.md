@@ -19,6 +19,8 @@ The three dots next to an item open it for editing right in the list, with butto
 
 Before heading to a shop, a family member can claim an open item with the hand button, so the others know it is taken care of and nobody buys it twice. A claimed item gets a blue stripe and tint and says who gets it. Anyone can remove a claim with the same button, and checking the item off removes it too. Claims nobody acts on expire after about three hours. Changes made by others appear live.
 
+While someone types a new item, the app suggests things the family bought before, so recurring items take two letters and a tap. Tapping a suggestion adds it right away and keeps the keyboard open for the next one; on a computer, the arrow keys and Enter do the same. Something that is already open on the list is shown greyed out with "steht schon drauf". The server learns from checking off: every check-off counts as one purchase of that text, regardless of upper and lower case, and un-checking takes it back, so a mistaken tap leaves no trace. Things nobody bought for three months drop out of the suggestions. Suggestions also work offline, from what the app loaded last. The app has no button to remove a suggestion; the administrator can edit or delete unwanted ones in the admin UI (`/_/`, collection **purchases**).
+
 The app also works without a connection, which is common inside shops. It opens with the last known list, and items can be added, edited, checked off, un-checked, claimed and deleted offline. These changes are marked as not yet synchronized and are sent as soon as the connection returns; a deleted item disappears right away. If two people change the same item, the change that reaches the server last wins, so an item deleted offline is gone even if someone else changed it in the meantime.
 
 Logging out removes the list and any unsent changes from the device. If only the session expired, unsent changes are kept until the same person logs in again. They are discarded if someone else logs in on that device, so they are never sent under the wrong name.
@@ -212,7 +214,7 @@ To roll back, check out the tag of an earlier release and run the two `docker co
 docker compose exec einkauf pocketbase migrate down 1 --dir=/pb_data --migrationsDir=/pb_migrations
 ```
 
-Reverting the migration that creates the `items` collection deletes all list items.
+Reverting the migration that creates the `items` collection deletes all list items, and reverting the one that creates `purchases` deletes the history behind the suggestions.
 
 Back up `pb_data/` in the deployment directory. It contains all application data.
 

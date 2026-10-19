@@ -18,7 +18,7 @@ why the icons never need to be redrawn when colors change.
 |---|---|
 | `--bg` | the page behind the list |
 | `--surface` | fields, buttons, the row in edit mode |
-| `--raised` | layers above the page: the account menu and dialogs |
+| `--raised` | layers above the page: the account menu, dialogs and suggestions |
 | `--text` | item text and titles |
 | `--muted` | meta lines, checked-off items, secondary labels |
 | `--line` | separators and borders |
@@ -60,7 +60,7 @@ Labels are written in sentence case. Nothing is set in capitals.
 Corners are rounded by role, not with one radius everywhere: 12 px for
 fields and buttons, 20 px for dialogs, the menu and cards, 8 px for the
 checkbox. Only layers that float above the page cast a shadow, which means
-the account menu and dialogs. Rows stay flat, without cards, and their
+the account menu, dialogs and the suggestions below the add field. Rows stay flat, without cards, and their
 separators start where the text starts, which keeps the list calm.
 
 The checkbox is drawn by the app instead of the browser, so it looks the

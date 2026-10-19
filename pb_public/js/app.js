@@ -8,6 +8,7 @@ import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
 import { createPrefs } from './prefs.js';
 import { createStore } from './storage.js';
+import { suggest } from './suggest.js';
 import { createSync } from './sync.js';
 import { createUpdater, parseVersion } from './update.js';
 import { VERSION } from './version.js';
@@ -32,6 +33,7 @@ const sync = createSync({
   onOffline: () => setConnection('offline'),
   onAuthError: () => endSession('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'),
   onRejected: () => showNotice('Eine Änderung wurde vom Server abgelehnt und verworfen.'),
+  onPurchases: () => updateSuggestions(),
 });
 const updater = createUpdater({ running: VERSION, backend: sessionStorage });
 // Rows the user just checked off or un-checked stay in place for a moment.
@@ -171,6 +173,8 @@ function render() {
   // that move rows are animated.
   if (moves && canAnimate()) document.startViewTransition(renderList);
   else renderList();
+  // Someone else may have added or checked off a suggested item meanwhile.
+  updateSuggestions();
 }
 
 const currentRows = (user) => buildRows(store.get('snapshot'), outbox.list(), user.id, hold.keys());
@@ -336,6 +340,85 @@ function addItem(text) {
   outbox.add({ type: 'create', id: newId(), text });
   render();
   flush();
+}
+
+// Suggestions
+
+// The suggestions on screen ([{ text, onList }]), the index of the one
+// selected by keyboard or -1, and whether Escape hid them until the user
+// types again.
+let suggestions = [];
+let selected = -1;
+let suggestionsDismissed = false;
+
+function updateSuggestions() {
+  const input = $('new-item');
+  const user = currentUser();
+  const active = user && !suggestionsDismissed && document.activeElement === input;
+  const openTexts = active
+    ? currentRows(user)
+        .filter((row) => !row.checked)
+        .map((row) => row.text)
+    : [];
+  const previous = suggestions[selected]?.text;
+  suggestions = active ? suggest(store.get('snapshot')?.purchases, input.value, openTexts) : [];
+  // Keep the keyboard selection on the same text if it is still selectable.
+  selected = suggestions.findIndex((s) => s.text === previous && !s.onList);
+  renderSuggestions();
+}
+
+function renderSuggestions() {
+  const input = $('new-item');
+  const list = $('suggestions');
+  list.replaceChildren(
+    ...suggestions.map((s, index) => {
+      const option = document.createElement('div');
+      option.className = 'suggestion';
+      option.id = `suggestion-${index}`;
+      option.dataset.index = String(index);
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', String(index === selected));
+      if (s.onList) option.setAttribute('aria-disabled', 'true');
+      // Purchase texts are user input: only ever set them as text.
+      const text = document.createElement('span');
+      text.className = 'suggestion-text';
+      text.textContent = s.text;
+      option.append(text);
+      if (s.onList) {
+        const note = document.createElement('span');
+        note.className = 'suggestion-note';
+        note.textContent = 'steht schon drauf';
+        option.append(' ', note);
+      }
+      return option;
+    }),
+  );
+  list.hidden = suggestions.length === 0;
+  input.setAttribute('aria-expanded', String(suggestions.length > 0));
+  if (selected >= 0) input.setAttribute('aria-activedescendant', `suggestion-${selected}`);
+  else input.removeAttribute('aria-activedescendant');
+}
+
+// Moves the keyboard selection by `step` over the selectable suggestions.
+// Moving up from the first one returns to the typed text.
+function moveSelection(step) {
+  let index = selected;
+  do index += step;
+  while (index >= 0 && index < suggestions.length && suggestions[index].onList);
+  if (index >= suggestions.length) return;
+  selected = Math.max(index, -1);
+  renderSuggestions();
+}
+
+// The field keeps the focus, so the phone keyboard stays open for the next
+// item.
+function chooseSuggestion(index) {
+  const suggestion = suggestions[index];
+  if (!suggestion || suggestion.onList) return;
+  $('new-item').value = '';
+  addItem(suggestion.text);
+  updateSuggestions();
+  reloadIfIdle();
 }
 
 function setChecked(row, checked) {
@@ -535,7 +618,37 @@ $('add-form').addEventListener('submit', (event) => {
   const text = input.value.trim();
   input.value = '';
   if (text) addItem(text);
+  updateSuggestions();
   reloadIfIdle();
+});
+
+$('new-item').addEventListener('input', () => {
+  suggestionsDismissed = false;
+  selected = -1;
+  updateSuggestions();
+});
+$('new-item').addEventListener('focus', updateSuggestions);
+$('new-item').addEventListener('blur', updateSuggestions);
+$('new-item').addEventListener('keydown', (event) => {
+  if (suggestions.length === 0) return;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    moveSelection(event.key === 'ArrowDown' ? 1 : -1);
+  } else if (event.key === 'Enter' && selected >= 0) {
+    // Adds the selected suggestion instead of submitting the typed text.
+    event.preventDefault();
+    chooseSuggestion(selected);
+  } else if (event.key === 'Escape') {
+    suggestionsDismissed = true;
+    updateSuggestions();
+  }
+});
+// Keeps the focus in the field when a suggestion is tapped, so the phone
+// keyboard stays open.
+$('suggestions').addEventListener('pointerdown', (event) => event.preventDefault());
+$('suggestions').addEventListener('click', (event) => {
+  const option = event.target.closest('[role="option"]');
+  if (option) chooseSuggestion(Number(option.dataset.index));
 });
 
 $('logout').addEventListener('click', requestLogout);

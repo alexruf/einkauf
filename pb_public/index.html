@@ -69,10 +69,13 @@
     <section class="list" id="list-screen" hidden>
       <form class="add" id="add-form">
         <input type="text" id="new-item" name="text" maxlength="200" autocomplete="off" enterkeyhint="done"
-          placeholder="Was wird gebraucht?" aria-label="Neuer Eintrag">
+          placeholder="Was wird gebraucht?" aria-label="Neuer Eintrag"
+          role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false">
         <button type="submit" class="primary add-button" aria-label="Hinzufügen" title="Hinzufügen">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
+        <!-- Past purchases matching the typed text; filled by app.js. -->
+        <div class="suggestions" id="suggestions" role="listbox" aria-label="Vorschläge" hidden></div>
       </form>
       <ul class="items" id="items"></ul>
       <div class="empty" id="empty" hidden>

@@ -25,6 +25,7 @@ const SHELL = [
   '/js/outbox.js',
   '/js/prefs.js',
   '/js/storage.js',
+  '/js/suggest.js',
   '/js/sync.js',
   '/js/update.js',
   '/js/version.js',

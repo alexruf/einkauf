@@ -119,3 +119,38 @@ test('given a subscriber, when the cleanup releases a claim, then the subscriber
     client.close();
   }
 });
+
+const PURCHASES = '/api/collections/purchases/records';
+const DAY = 24 * HOUR;
+
+async function createPurchase(text, daysAgo) {
+  const lastAt = new Date(Date.now() - daysAgo * DAY).toISOString().replace('T', ' ');
+  const body = { key: text.toLowerCase(), text, count: 2, lastAt };
+  const res = await api(server.url, PURCHASES, { method: 'POST', token: server.superuserToken, body });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  return res.body;
+}
+
+const purchaseExists = async (id) =>
+  (await api(server.url, `${PURCHASES}/${id}`, { token: server.superuserToken })).status === 200;
+
+test('given purchases of different ages, when the cleanup runs, then only those last bought over 90 days ago are deleted', async () => {
+  const old = await createPurchase('Lange her', 91);
+  const recent = await createPurchase('Neulich', 89);
+
+  const res = await cleanup(server.superuserToken);
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.ok(res.body.expired >= 1, `expired ${res.body.expired}`);
+
+  assert.equal(await purchaseExists(old.id), false);
+  assert.equal(await purchaseExists(recent.id), true);
+});
+
+test('given the hourly cron job, when it runs, then it deletes old purchases', async () => {
+  const old = await createPurchase('Vergessen', 120);
+  const run = await api(server.url, '/api/crons/einkauf_cleanup', { method: 'POST', token: server.superuserToken });
+  assert.equal(run.status, 204, JSON.stringify(run.body));
+  // The job runs in the background; give it a moment.
+  for (let i = 0; i < 20 && (await purchaseExists(old.id)); i++) await new Promise((r) => setTimeout(r, 50));
+  assert.equal(await purchaseExists(old.id), false);
+});

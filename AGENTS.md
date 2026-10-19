@@ -89,7 +89,7 @@ Project rules:
   e2e server raises only the general `/api/` limit (`global-setup.mjs`).
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
   DOM-free modules (`ids`, `storage`, `app-name`, `prefs`, `outbox`, `view`,
-  `hold`, `sync`, `update`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
+  `hold`, `suggest`, `sync`, `update`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
   written only by `make release`; never edit it by hand. All writes go
   through the outbox. New files in `pb_public/` must be added to `SHELL` in
   `sw.js` (a test enforces it). CSP is a meta tag in
@@ -100,8 +100,10 @@ Project rules:
 - **Server logic:** item hooks in `pb_hooks/items.pb.js`, cleanup cron and
   route in `pb_hooks/cleanup.pb.js`, public app-name route in
   `pb_hooks/app-name.pb.js`, mail refusal (app sends no email) in
-  `pb_hooks/mail.pb.js`; shared code in `pb_hooks/items.js` loaded with
-  `require()` inside each handler.
+  `pb_hooks/mail.pb.js`; shared code in `pb_hooks/items.js` and
+  `pb_hooks/purchases.js` (purchase counting for suggestions, expiry)
+  loaded with `require()` inside each handler. Purchase key normalization
+  exists twice (`purchases.js`, `pb_public/js/suggest.js`); change both.
 
 ## Development Guidelines
 

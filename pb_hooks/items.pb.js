@@ -11,8 +11,15 @@ onRecordCreateRequest((e) => {
 }, "items");
 
 onRecordUpdateRequest((e) => {
-  if (!e.hasSuperuserAuth()) {
-    require(`${__hooks}/items.js`).applyMemberWrite(e.record, e.auth, false);
+  if (e.hasSuperuserAuth()) {
+    e.next();
+    return;
   }
+  require(`${__hooks}/items.js`).applyMemberWrite(e.record, e.auth, false);
+  const wasChecked = e.record.original().getBool("checked");
+  const checked = e.record.getBool("checked");
+  const text = e.record.getString("text");
+  // Counted only after the save succeeded, so a refused update counts nothing.
   e.next();
+  require(`${__hooks}/purchases.js`).recordCheckChange(e.app, wasChecked, checked, text);
 }, "items");
