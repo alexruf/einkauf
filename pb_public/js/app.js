@@ -8,7 +8,7 @@ import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
 import { createPrefs } from './prefs.js';
 import { createStore } from './storage.js';
-import { suggest } from './suggest.js';
+import { findOpenItem, suggest } from './suggest.js';
 import { createSync } from './sync.js';
 import { createUpdater, parseVersion } from './update.js';
 import { VERSION } from './version.js';
@@ -48,6 +48,10 @@ const hold = createHold({
 // When the user checked off each held row, so its strike-through is drawn
 // once and continues smoothly when the row is re-rendered meanwhile.
 const strikes = new Map();
+// The row pointed at because the user added or saved its text again:
+// { id, start, timer }, or null. Kept here, so re-renders keep the highlight.
+let highlighted = null;
+const HIGHLIGHT_MS = 2000;
 
 // 'connecting' until the realtime connection is established or a request
 // fails.
@@ -178,6 +182,7 @@ function render() {
 }
 
 const currentRows = (user) => buildRows(store.get('snapshot'), outbox.list(), user.id, hold.keys());
+const openRows = (user) => currentRows(user).filter((row) => !row.checked);
 
 const canAnimate = () =>
   typeof document.startViewTransition === 'function' &&
@@ -233,6 +238,10 @@ function rowElement(row) {
   if (row.checked && strikes.has(row.id)) {
     li.classList.add('is-striking');
     text.style.animationDelay = `${strikes.get(row.id) - performance.now()}ms`;
+  }
+  if (highlighted?.id === row.id) {
+    li.classList.add('is-highlighted');
+    li.style.animationDelay = `${highlighted.start - performance.now()}ms`;
   }
   li.querySelector('.meta').textContent = row.meta;
   const checkbox = li.querySelector('input');
@@ -304,6 +313,16 @@ function cancelEdit() {
 
 function saveEdit(value) {
   const { id } = editing;
+  const user = currentUser();
+  const edited = currentRows(user).find((row) => row.id === id);
+  const existing = edited && !edited.checked && findOpenItem(openRows(user), value, id);
+  if (existing) {
+    // The edit stays open with the typed text, so the user can change it. The
+    // list does not scroll, which would push the field away from the keyboard.
+    pointAt(existing, { scroll: false });
+    restoreEditField();
+    return;
+  }
   closeEdit();
   setText(id, value);
   render();
@@ -342,6 +361,20 @@ function addItem(text) {
   flush();
 }
 
+// Points at an open row whose text the user just added or saved again,
+// instead of putting the same item on the list twice.
+function pointAt(row, { scroll }) {
+  clearTimeout(highlighted?.timer);
+  const timer = setTimeout(() => {
+    highlighted = null;
+    render();
+  }, HIGHLIGHT_MS);
+  highlighted = { id: row.id, start: performance.now(), timer };
+  showNotice(`„${row.text}“ steht schon drauf.`);
+  render();
+  if (scroll) document.querySelector(`.items [data-id="${CSS.escape(row.id)}"]`)?.scrollIntoView({ block: 'nearest' });
+}
+
 // Suggestions
 
 // The suggestions on screen ([{ text, onList }]), the index of the one
@@ -355,11 +388,7 @@ function updateSuggestions() {
   const input = $('new-item');
   const user = currentUser();
   const active = user && !suggestionsDismissed && document.activeElement === input;
-  const openTexts = active
-    ? currentRows(user)
-        .filter((row) => !row.checked)
-        .map((row) => row.text)
-    : [];
+  const openTexts = active ? openRows(user).map((row) => row.text) : [];
   const previous = suggestions[selected]?.text;
   suggestions = active ? suggest(store.get('snapshot')?.purchases, input.value, openTexts) : [];
   // Keep the keyboard selection on the same text if it is still selectable.
@@ -617,7 +646,9 @@ $('add-form').addEventListener('submit', (event) => {
   const input = $('new-item');
   const text = input.value.trim();
   input.value = '';
-  if (text) addItem(text);
+  const existing = text && findOpenItem(openRows(currentUser()), text);
+  if (existing) pointAt(existing, { scroll: true });
+  else if (text) addItem(text);
   updateSuggestions();
   reloadIfIdle();
 });

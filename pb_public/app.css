@@ -757,6 +757,27 @@ main {
   fill: color-mix(in srgb, currentColor 35%, transparent);
 }
 
+/* Points at the row that is already on the list when someone adds or edits
+   the same text. Only the tint fades out; the claim stripe stays. The app
+   removes the class after 2 seconds. */
+.item.is-highlighted {
+  animation: highlight 2s ease-in both;
+}
+
+@keyframes highlight {
+  from,
+  70% {
+    background: var(--notice);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item.is-highlighted {
+    animation: none;
+    background: var(--notice);
+  }
+}
+
 /* Edit mode: the row turns into a field with its actions below. */
 .items > li {
   /* Keeps a row scrolled into view clear of the sticky add field. */

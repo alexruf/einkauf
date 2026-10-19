@@ -24,6 +24,7 @@ why the icons never need to be redrawn when colors change.
 | `--line` | separators and borders |
 | `--accent` | checking off and the primary button |
 | `--claim` | the stripe and tint of a claimed item |
+| `--notice` | messages in the status bar and the short highlight of a row that is already on the list |
 | `--danger` | deleting and logging out |
 
 Every color has a light and a dark value. Dark mode is designed, not

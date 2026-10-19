@@ -1,5 +1,6 @@
-// Picks the past purchases to suggest while the user types a new item. Pure,
-// so it can be tested without a browser.
+// Picks the past purchases to suggest while the user types a new item, and
+// finds an open item that already has a typed text. Pure, so it can be tested
+// without a browser.
 
 const MIN_QUERY = 2;
 const MAX_SUGGESTIONS = 5;
@@ -7,6 +8,14 @@ const MAX_SUGGESTIONS = 5;
 // Texts that differ only in case or spacing are the same purchase. The server
 // builds its purchase key the same way in pb_hooks/purchases.js.
 export const normalize = (text) => text.trim().replace(/\s+/g, ' ').toLowerCase();
+
+// items: the open items ([{ id, text }]). Returns the one whose text is the
+// same as `text`, apart from the item `exceptId`, so an item being edited is
+// never a duplicate of itself.
+export function findOpenItem(items, text, exceptId) {
+  const key = normalize(text);
+  return items.find((item) => item.id !== exceptId && normalize(item.text) === key);
+}
 
 // True when the text or one of its words, separated by spaces or hyphens,
 // starts with the query.

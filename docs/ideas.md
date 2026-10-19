@@ -47,13 +47,6 @@ a few seconds. This matters most for deleting, which is permanent. Checking
 off is already forgiving, because the row stays in place for a moment and
 can simply be un-checked.
 
-### Duplicate items when typing the full text
-
-The suggestions already mark a past purchase that is open on the list as
-"steht schon drauf". Someone who types the whole text and submits it still
-creates a second open item. The app could highlight the existing row
-instead, or ask before adding the duplicate.
-
 ## New features
 
 These are sorted by how much we expect them to help.

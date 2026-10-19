@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { suggest } from '../../pb_public/js/suggest.js';
+import { findOpenItem, suggest } from '../../pb_public/js/suggest.js';
 
 const purchase = (text, count = 1) => ({ id: text, text, count });
 const texts = (suggestions) => suggestions.map((s) => s.text);
@@ -57,4 +57,29 @@ test('given an open item with a variant of the text, then the suggestion is not 
 
 test('given no purchases, then nothing is suggested', () => {
   assert.deepEqual(suggest(undefined, 'milch', []), []);
+});
+
+const item = (id, text) => ({ id, text });
+
+test('given an open item in other case or spacing, then it is found', () => {
+  const items = [item('a', 'Brot'), item('b', 'Grüne Bohnen')];
+  assert.deepEqual(findOpenItem(items, ' GRÜNE   bohnen '), item('b', 'Grüne Bohnen'));
+  assert.deepEqual(findOpenItem(items, 'brot'), item('a', 'Brot'));
+});
+
+test('given only a variant of the text is open, then nothing is found', () => {
+  assert.equal(findOpenItem([item('a', 'Milch')], 'Milch 2x'), undefined);
+});
+
+test('given no open items, then nothing is found', () => {
+  assert.equal(findOpenItem([], 'Milch'), undefined);
+});
+
+test('given the only match is the excepted item, then nothing is found', () => {
+  assert.equal(findOpenItem([item('a', 'milch')], 'Milch', 'a'), undefined);
+});
+
+test('given the excepted item and another match, then the other one is found', () => {
+  const items = [item('a', 'milch'), item('b', 'Milch')];
+  assert.deepEqual(findOpenItem(items, 'MILCH', 'a'), item('b', 'Milch'));
 });
