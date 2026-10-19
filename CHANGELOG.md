@@ -3,6 +3,26 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.19.1 (2026-10-19)
+
+### Features
+
+- **offline-sync:** Delete items through the outbox
+- **item-suggestions:** Suggest past purchases while adding items
+- **shopping-list:** Point at existing item instead of adding a duplicate
+- **shopping-list:** Cancel edit on Escape when nothing has focus
+
+### Bug Fixes
+
+- **user-auth:** Cancel the token refresh when the session ends
+- **offline-sync:** Stop sending changes a logout discarded
+- **offline-sync:** Keep confirmed changes in the stored list
+- **offline-sync:** Subscribe to item changes before the first reload
+- **user-auth:** Follow logins and logouts from other tabs
+
+### Documentation
+
+- Collect open ideas in docs/ideas.md
 ## 2026.10.19.0 (2026-10-19)
 
 ### Bug Fixes
