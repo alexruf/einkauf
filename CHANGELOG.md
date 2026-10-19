@@ -3,6 +3,12 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.19.0 (2026-10-19)
+
+### Bug Fixes
+
+- **web-app:** Stop preselecting the cancel button in the logout sheet
+- **user-auth:** Refuse every email the server would send
 ## 2026.10.18.4 (2026-10-18)
 
 ### Features
