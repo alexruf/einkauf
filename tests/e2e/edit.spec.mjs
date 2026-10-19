@@ -118,6 +118,38 @@ test('given the edit mode, when Anna presses Escape, then the text stays', async
   expect((await listItems()).map((i) => i.text)).toEqual(['Butter']);
 });
 
+// Some browser extensions use the first Escape to leave the field, so the
+// page only sees the second one, with nothing focused.
+test('given the edit mode, when the field loses focus and Anna presses Escape, then the edit is cancelled', async ({
+  annaPage,
+}) => {
+  await createItem(anna, 'Butter');
+  await annaPage.reload();
+
+  await startEditing(annaPage, 'Butter');
+  await editField(annaPage).fill('Margarine');
+  await editField(annaPage).blur();
+  await annaPage.keyboard.press('Escape');
+
+  await expect(editRow(annaPage)).toHaveCount(0);
+  await expect(moreButton(annaPage, 'Butter')).toBeFocused();
+  expect((await listItems()).map((i) => i.text)).toEqual(['Butter']);
+});
+
+test('given the edit mode, when Anna presses Escape in the add field, then the edit stays open', async ({
+  annaPage,
+}) => {
+  await createItem(anna, 'Butter');
+  await annaPage.reload();
+
+  await startEditing(annaPage, 'Butter');
+  await editField(annaPage).fill('Margarine');
+  await annaPage.getByLabel('Neuer Eintrag').fill('Brot');
+  await annaPage.getByLabel('Neuer Eintrag').press('Escape');
+
+  await expect(editField(annaPage)).toHaveValue('Margarine');
+});
+
 test('given the edit mode of one item, when Anna opens another, then the first closes without changes', async ({
   annaPage,
 }) => {

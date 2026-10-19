@@ -693,6 +693,13 @@ $('done-toggle').addEventListener('click', () => {
 for (const dialog of document.querySelectorAll('dialog')) {
   dialog.addEventListener('close', () => setTimeout(reloadIfIdle, 0));
 }
+// The edit row handles Escape itself. Some browser extensions use the first
+// Escape to leave the field, which leaves nothing focused; the next Escape
+// should still cancel. Escape in other controls keeps its own meaning.
+document.addEventListener('keydown', (event) => {
+  const nothingFocused = !document.activeElement || document.activeElement === document.body;
+  if (event.key === 'Escape' && editing && nothingFocused) cancelEdit();
+});
 
 window.addEventListener('online', () => currentUser() && flush());
 // The browser knowing it is offline is reliable; it claiming to be online
