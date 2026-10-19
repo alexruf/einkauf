@@ -48,7 +48,7 @@ const hold = createHold({
 const strikes = new Map();
 
 // 'connecting' until the realtime connection is established or a request
-// fails. Deleting is only offered while 'online'.
+// fails.
 let connection = 'connecting';
 let notice = '';
 let noticeTimer;
@@ -268,16 +268,7 @@ function editRowElement(row) {
     saveEdit(field.value);
   });
   li.querySelector('.edit-cancel').addEventListener('click', cancelEdit);
-  const del = li.querySelector('.edit-delete');
-  // An item that has not reached the server yet cannot be deleted there.
-  del.disabled = connection !== 'online' || row.pending;
-  li.querySelector('.edit-hint').hidden = connection === 'online';
-  del.addEventListener('click', () => {
-    const { id } = editing;
-    closeEdit();
-    render();
-    deleteItem(id);
-  });
+  li.querySelector('.edit-delete').addEventListener('click', deleteEdited);
   return li;
 }
 
@@ -313,6 +304,15 @@ function saveEdit(value) {
   setText(id, value);
   render();
   document.querySelector(`.items [data-id="${CSS.escape(id)}"] .more`)?.focus();
+  reloadIfIdle();
+}
+
+function deleteEdited() {
+  const { id } = editing;
+  closeEdit();
+  outbox.add({ type: 'delete', id });
+  render();
+  flush();
   reloadIfIdle();
 }
 
@@ -369,37 +369,6 @@ function setText(id, value) {
   outbox.add({ type: 'setText', id, text });
   render();
   flush();
-}
-
-// Deleting does not go through the outbox, so a reload while a delete
-// request is running could abort it.
-let runningDeletes = 0;
-
-async function deleteItem(id) {
-  runningDeletes += 1;
-  try {
-    await pb.collection('items').delete(id);
-  } catch (error) {
-    if (error?.status === 0) {
-      setConnection('offline');
-      showNotice('Löschen ist nur online möglich.');
-      return;
-    }
-    if (error?.status === 401) {
-      endSession('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.');
-      return;
-    }
-    // 404: someone else deleted it already, which is the wanted result.
-    if (error?.status !== 404) {
-      console.error('Deleting item failed', id, error);
-      showNotice('Der Eintrag konnte nicht gelöscht werden.');
-      return;
-    }
-  } finally {
-    runningDeletes -= 1;
-    reloadIfIdle();
-  }
-  sync.applyEvent({ action: 'delete', record: { id } });
 }
 
 // Session
@@ -464,11 +433,7 @@ async function checkVersion() {
 // Unsent changes survive a reload in the outbox; only an entry in progress
 // would be lost, so the reload waits for it.
 function reloadIfIdle() {
-  const busy =
-    $('new-item').value.trim() !== '' ||
-    editing !== null ||
-    document.querySelector('dialog[open]') !== null ||
-    runningDeletes > 0;
+  const busy = $('new-item').value.trim() !== '' || editing !== null || document.querySelector('dialog[open]') !== null;
   if (updater.takeReload(busy)) location.reload();
 }
 

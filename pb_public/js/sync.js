@@ -15,6 +15,9 @@ function classify(op, error) {
   if (status === 429 || status >= 500) return 'retry';
   if (status === 404 && (op.type === 'setChecked' || op.type === 'setText' || op.type === 'setClaimed'))
     return 'deleted';
+  // The item is gone, which is what the delete was for: the first attempt
+  // arrived with its response lost, or someone else deleted it.
+  if (status === 404 && op.type === 'delete') return 'done';
   if (status === 400 && op.type === 'create') return 'maybe-duplicate';
   return 'rejected';
 }
@@ -50,6 +53,8 @@ export function createSync({
       // The server records whoever sends the claim; the own id only says
       // "claimed", an empty value says "released".
       await items().update(op.id, { claimedBy: op.claimed ? pb.authStore.record.id : '' });
+    } else if (op.type === 'delete') {
+      await items().delete(op.id);
     } else {
       throw new Error(`Unknown outbox operation: ${JSON.stringify(op)}`);
     }

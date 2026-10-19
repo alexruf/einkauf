@@ -1,4 +1,14 @@
-import { createItem, deleteAllItems, expect, listItems, row, test, users } from '../support/e2e.mjs';
+import {
+  createItem,
+  deleteAllItems,
+  expect,
+  goOffline,
+  goOnline,
+  listItems,
+  row,
+  test,
+  users,
+} from '../support/e2e.mjs';
 
 const { anna } = users;
 
@@ -44,18 +54,51 @@ test('given an open item, when Anna deletes it, then it disappears for everyone 
   await expect(row(benPage, 'Brot')).toHaveCount(0, { timeout: 5000 });
 });
 
-test('given the device is offline, then deleting is shown as unavailable with a hint', async ({ annaPage }) => {
+test('given the device is offline, when Anna deletes an item, then it disappears for her at once and for everyone after reconnecting', async ({
+  annaPage,
+  benPage,
+}) => {
   await createItem(anna, 'Käse');
   await annaPage.reload();
-  await startEditing(annaPage, 'Käse');
-  await expect(deleteButton(annaPage)).toBeEnabled();
-  await expect(editRow(annaPage).getByText('Löschen ist nur online möglich.')).toBeHidden();
-
-  await annaPage.context().setOffline(true);
-  await expect(deleteButton(annaPage)).toBeDisabled();
-  await expect(editRow(annaPage).getByText('Löschen ist nur online möglich.')).toBeVisible();
+  await expect(row(benPage, 'Käse')).toBeVisible();
+  await goOffline(annaPage);
   await expect(annaPage.getByRole('status')).toHaveText('Offline – Änderungen werden später übertragen.');
 
-  await annaPage.context().setOffline(false);
-  await expect(deleteButton(annaPage)).toBeEnabled({ timeout: 10000 });
+  await startEditing(annaPage, 'Käse');
+  await expect(deleteButton(annaPage)).toBeEnabled();
+  await deleteButton(annaPage).click();
+
+  await expect(row(annaPage, 'Käse')).toHaveCount(0);
+  await expect(annaPage.locator('#sync-indicator')).toHaveAttribute('data-state', 'pending');
+  await expect(row(benPage, 'Käse')).toBeVisible();
+  expect(await listItems()).toHaveLength(1);
+
+  await goOnline(annaPage);
+
+  await expect(row(benPage, 'Käse')).toHaveCount(0, { timeout: 10000 });
+  await expect(annaPage.locator('#sync-indicator')).toHaveAttribute('data-state', 'ok', { timeout: 10000 });
+  await expect(row(annaPage, 'Käse')).toHaveCount(0);
+  expect(await listItems()).toHaveLength(0);
+});
+
+test("given an item Anna added offline, when she deletes it, then it is in nobody's list after reconnecting", async ({
+  annaPage,
+  benPage,
+}) => {
+  await goOffline(annaPage);
+  await annaPage.getByLabel('Neuer Eintrag').fill('Eier');
+  await annaPage.keyboard.press('Enter');
+  await expect(row(annaPage, 'Eier')).toBeVisible();
+
+  await startEditing(annaPage, 'Eier');
+  await expect(deleteButton(annaPage)).toBeEnabled();
+  await deleteButton(annaPage).click();
+  await expect(row(annaPage, 'Eier')).toHaveCount(0);
+
+  await goOnline(annaPage);
+
+  await expect(annaPage.locator('#sync-indicator')).toHaveAttribute('data-state', 'ok', { timeout: 10000 });
+  await expect(row(annaPage, 'Eier')).toHaveCount(0);
+  await expect(row(benPage, 'Eier')).toHaveCount(0);
+  expect(await listItems()).toHaveLength(0);
 });

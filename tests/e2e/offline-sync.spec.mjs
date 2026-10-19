@@ -72,6 +72,65 @@ test('given Anna changes the list offline, when she reconnects, then everyone se
   await expect(rows(annaPage)).toHaveCount(3);
 });
 
+test('given Anna deletes an item offline, when she reopens the app offline and then reconnects, then it stays hidden and is deleted for everyone', async ({
+  annaPage,
+  benPage,
+}) => {
+  await annaGoesOffline(annaPage, ['Milch', 'Brot']);
+  await deleteInApp(annaPage, 'Milch');
+  await expect(row(annaPage, 'Milch')).toHaveCount(0);
+
+  await annaPage.reload();
+  await expect(row(annaPage, 'Brot')).toBeVisible();
+  await expect(row(annaPage, 'Milch')).toHaveCount(0);
+  await expect(row(benPage, 'Milch')).toBeVisible();
+
+  await goOnline(annaPage);
+
+  await expect(row(benPage, 'Milch')).toHaveCount(0, { timeout: 10000 });
+  await expect(row(annaPage, 'Brot')).toBeVisible();
+  expect((await listItems()).map((i) => i.text)).toEqual(['Brot']);
+});
+
+test('given Anna deletes an item offline and Ben then edits it online, when Anna reconnects, then nobody sees it', async ({
+  annaPage,
+  benPage,
+}) => {
+  await annaGoesOffline(annaPage, ['Milch']);
+  await deleteInApp(annaPage, 'Milch');
+  await expect(row(annaPage, 'Milch')).toHaveCount(0);
+
+  await benPage.reload();
+  await row(benPage, 'Milch').getByRole('button', { name: 'Mehr' }).click();
+  await benPage.locator('.item.is-editing').getByLabel('Eintrag').fill('Hafermilch');
+  await benPage.keyboard.press('Enter');
+  await expect.poll(async () => (await listItems()).map((i) => i.text)).toEqual(['Hafermilch']);
+
+  await goOnline(annaPage);
+
+  await expect(row(benPage, 'Hafermilch')).toHaveCount(0, { timeout: 10000 });
+  await expect(row(annaPage, 'Hafermilch')).toHaveCount(0);
+  expect(await listItems()).toHaveLength(0);
+  await expect(annaPage.getByRole('status')).toBeHidden();
+});
+
+test('given a delete made offline, when Anna asks to log out, then the dialog warns that 1 change will be lost', async ({
+  annaPage,
+}) => {
+  await annaGoesOffline(annaPage, ['Milch']);
+  await deleteInApp(annaPage, 'Milch');
+  await expect(row(annaPage, 'Milch')).toHaveCount(0);
+
+  await annaPage.locator('.account-button').click();
+  await annaPage.locator('#account-menu').getByRole('button', { name: 'Abmelden' }).click();
+
+  await expect(annaPage.getByRole('dialog')).toContainText(
+    '1 Änderung ist noch nicht übertragen und geht beim Abmelden verloren. Trotzdem abmelden?',
+  );
+  await annaPage.getByRole('dialog').getByRole('button', { name: 'Abbrechen' }).click();
+  await goOnline(annaPage);
+});
+
 test('given Ben deletes an item Anna checked off offline, when Anna reconnects, then it stays deleted and her other changes sync', async ({
   annaPage,
   benPage,

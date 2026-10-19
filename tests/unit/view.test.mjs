@@ -196,6 +196,38 @@ test('given a pending text change of an item no longer on the server, then it is
   assert.deepEqual(buildRows({ users, items: [] }, ops, 'anna'), []);
 });
 
+test('given a pending delete, then the item is not shown', () => {
+  const snapshot = { users, items: [item('milch', { text: 'Milch' }), item('brot', { text: 'Brot' })] };
+  const ops = [{ type: 'delete', id: 'milch', at: '2026-10-17T10:00:00.000Z' }];
+  assert.deepEqual(texts(buildRows(snapshot, ops, 'anna')), ['Brot']);
+});
+
+test('given a pending create that is then deleted, then the item is not shown', () => {
+  const ops = [
+    { type: 'create', id: 'eier', text: 'Eier', at: '2026-10-17T10:00:00.000Z' },
+    { type: 'delete', id: 'eier', at: '2026-10-17T10:01:00.000Z' },
+  ];
+  assert.deepEqual(buildRows({ users, items: [] }, ops, 'anna'), []);
+});
+
+test('given a pending delete of an item the server already has from the create, then the item is not shown', () => {
+  const snapshot = { users, items: [item('eier', { text: 'Eier' })] };
+  const ops = [
+    { type: 'create', id: 'eier', text: 'Eier', at: '2026-10-17T10:00:00.000Z' },
+    { type: 'delete', id: 'eier', at: '2026-10-17T10:01:00.000Z' },
+  ];
+  assert.deepEqual(buildRows(snapshot, ops, 'anna'), []);
+});
+
+test('given a pending check-off after a pending delete of the same item, then it is not shown', () => {
+  const snapshot = { users, items: [item('milch', { text: 'Milch' })] };
+  const ops = [
+    { type: 'delete', id: 'milch', at: '2026-10-17T10:00:00.000Z' },
+    { type: 'setChecked', id: 'milch', checked: true, at: '2026-10-17T10:01:00.000Z' },
+  ];
+  assert.deepEqual(buildRows(snapshot, ops, 'anna'), []);
+});
+
 test('given a pending create the server already has, then the item is shown once and not pending', () => {
   const snapshot = { users, items: [item('eier')] };
   const ops = [{ type: 'create', id: 'eier', text: 'eier', at: '2026-10-17T10:00:00.000Z' }];

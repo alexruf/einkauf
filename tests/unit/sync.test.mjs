@@ -47,6 +47,13 @@ function fakePb({ items = [], users = [], failures = {} } = {}) {
         Object.assign(server.get(id), data);
         return server.get(id);
       },
+      async delete(id) {
+        calls.push(['delete', id]);
+        fail(`delete:${id}`);
+        if (!server.has(id)) throw httpError(404);
+        server.delete(id);
+        return true;
+      },
       async getOne(id) {
         calls.push(['getOne', id]);
         fail(`getOne:${id}`);
@@ -88,7 +95,7 @@ function setup(pbOptions, { now } = {}) {
   return { ...fake, store, outbox, sync, events };
 }
 
-const sentCalls = (calls) => calls.filter(([name]) => name === 'create' || name === 'update');
+const sentCalls = (calls) => calls.filter(([name]) => ['create', 'update', 'delete'].includes(name));
 
 test('given pending changes, when flushing, then they are sent in order and leave the outbox', async () => {
   const { sync, outbox, calls } = setup({ items: [{ id: 'milch', text: 'Milch' }] });
@@ -259,6 +266,62 @@ test('given a claim of an item deleted on the server, when flushing, then it is 
   assert.deepEqual(outbox.list(), []);
   assert.equal(server.get('brot').claimedBy, 'anna');
   assert.deepEqual(events.rejected, []);
+});
+
+test('given a pending delete, when flushing, then the item is deleted on the server and leaves the outbox', async () => {
+  const { sync, outbox, server, calls } = setup({ items: [{ id: 'milch', text: 'Milch' }] });
+  outbox.add({ type: 'delete', id: 'milch' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(sentCalls(calls), [['delete', 'milch']]);
+  assert.equal(server.has('milch'), false);
+  assert.deepEqual(outbox.list(), []);
+});
+
+test('given a delete of an item already gone on the server, when flushing, then it counts as done and the rest is sent', async () => {
+  const { sync, outbox, server, events } = setup({ items: [{ id: 'brot', text: 'Brot' }] });
+  outbox.add({ type: 'delete', id: 'milch' });
+  outbox.add({ type: 'setChecked', id: 'brot', checked: true });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(outbox.list(), []);
+  assert.equal(server.get('brot').checked, true);
+  assert.deepEqual(events.rejected, []);
+});
+
+test('given a delete that fails offline, when flushing, then it stays in the outbox and stops the flush', async () => {
+  const { sync, outbox, server, events } = setup({
+    items: [{ id: 'milch', text: 'Milch' }],
+    failures: { 'delete:milch': httpError(0) },
+  });
+  outbox.add({ type: 'delete', id: 'milch' });
+  outbox.add({ type: 'create', id: 'eier', text: 'Eier' });
+
+  assert.equal(await sync.flush(), 'offline');
+  assert.deepEqual(
+    outbox.list().map((op) => [op.type, op.id]),
+    [
+      ['delete', 'milch'],
+      ['create', 'eier'],
+    ],
+  );
+  assert.equal(server.has('milch'), true);
+  assert.equal(server.has('eier'), false);
+  assert.equal(events.offline, 1);
+});
+
+test('given a pending create followed by its delete, when flushing, then both are sent in order', async () => {
+  const { sync, outbox, server, calls } = setup();
+  outbox.add({ type: 'create', id: 'eier', text: 'Eier' });
+  outbox.add({ type: 'delete', id: 'eier' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(sentCalls(calls), [
+    ['create', 'eier'],
+    ['delete', 'eier'],
+  ]);
+  assert.equal(server.has('eier'), false);
+  assert.deepEqual(outbox.list(), []);
 });
 
 test('given claimed items on the server, when reloading, then the claim fields are kept in the snapshot', async () => {

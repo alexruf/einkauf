@@ -7,6 +7,7 @@
 //   { type: 'setChecked', id, checked }   (an absolute value, never a toggle)
 //   { type: 'setText', id, text }         (the whole new text)
 //   { type: 'setClaimed', id, claimed }   (an absolute value, never a toggle)
+//   { type: 'delete', id }                (an item already gone counts as done)
 // Each one also gets `opId` to identify it and `at`, the local time of the
 // action, which the list uses to sort pending items.
 

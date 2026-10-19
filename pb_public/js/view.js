@@ -50,6 +50,10 @@ export function buildRows(snapshot, ops, me, held = new Map()) {
     } else if (op.type === 'setClaimed' && item && !item.checked) {
       // The server ignores claims of checked items, so they are not shown.
       byId.set(op.id, { ...item, claimedBy: op.claimed ? me : '', updatedBy: me, pending: true });
+    } else if (op.type === 'delete') {
+      // Hidden right away, as an online delete would be, and also while a
+      // reload still brings the item back before the delete is sent.
+      byId.delete(op.id);
     }
   }
 

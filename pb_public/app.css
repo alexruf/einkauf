@@ -747,12 +747,6 @@ main {
   color: var(--danger);
 }
 
-.edit-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--size-meta);
-}
-
 .empty {
   display: grid;
   justify-items: center;
