@@ -31,7 +31,7 @@ PocketBase, no build step.
 | `openspec/specs/` | Capability specs; changes go through OpenSpec        |
 | `tests/`          | `unit/`, `api/` (`node --test`), `e2e/` (Playwright) |
 | `scripts/`        | Tooling scripts run by `make` (`release.sh`)         |
-| `docs/`           | Human docs (`design.md`: visual design rules)        |
+| `docs/`           | Human docs (`design.md`: visual rules; `ideas.md`)   |
 
 Commands (Nix with flakes required, no Docker needed locally):
 
@@ -96,7 +96,9 @@ Project rules:
   `index.html`: no inline scripts/styles, item text only via `textContent`.
 - **OpenSpec flow:** apply, verify, then `/opsx:archive` (sync specs)
   before committing; code, main specs and archived change go into one
-  commit. No separate archive commits.
+  commit. No separate archive commits. `docs/ideas.md` is an unscheduled
+  idea backlog, not a plan: remove an idea (or the done part) when its
+  change is archived; add new ideas there, not as OpenSpec changes.
 - **Server logic:** item hooks in `pb_hooks/items.pb.js`, cleanup cron and
   route in `pb_hooks/cleanup.pb.js`, public app-name route in
   `pb_hooks/app-name.pb.js`, mail refusal (app sends no email) in
