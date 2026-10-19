@@ -395,6 +395,66 @@ test('given a successful flush, then items and user names are reloaded into the 
   assert.deepEqual(snapshot.users, [{ id: 'anna', name: 'Anna' }]);
 });
 
+// Each case: the items on the server, one pending change, and what the
+// snapshot, which starts with an unchecked "Milch", should hold for the
+// changed item once the server confirmed the change.
+for (const [name, serverItems, op, expected] of [
+  ['a new item', [], { type: 'create', id: 'eier', text: 'Eier' }, [['eier', 'Eier', false]]],
+  [
+    'a new item whose first answer was lost',
+    [{ id: 'eier', text: 'Eier', checked: false }],
+    { type: 'create', id: 'eier', text: 'Eier' },
+    [['eier', 'Eier', false]],
+  ],
+  [
+    'a check-off',
+    [{ id: 'milch', text: 'Milch', checked: false }],
+    { type: 'setChecked', id: 'milch', checked: true },
+    [['milch', 'Milch', true]],
+  ],
+  ['a delete', [{ id: 'milch', text: 'Milch', checked: false }], { type: 'delete', id: 'milch' }, []],
+  ['a delete of an item already gone', [], { type: 'delete', id: 'milch' }, []],
+  ['a check-off of an item already gone', [], { type: 'setChecked', id: 'milch', checked: true }, []],
+]) {
+  test(`given ${name} reached the server, when the list then fails to load, then the snapshot shows the result`, async () => {
+    const { sync, outbox, store } = setup({ items: serverItems, failures: { listItems: httpError(0) } });
+    store.set('snapshot', { items: [{ id: 'milch', text: 'Milch', checked: false }], users: [] });
+    outbox.add(op);
+
+    assert.equal(await sync.flush(), 'offline');
+    assert.deepEqual(outbox.list(), []);
+    assert.deepEqual(
+      store
+        .get('snapshot')
+        .items.filter((i) => i.id === op.id)
+        .map((i) => [i.id, i.text, i.checked]),
+      expected,
+    );
+  });
+}
+
+test('given a realtime event while a change is on its way, when the older answer arrives, then the event is not lost', async () => {
+  const { sync, outbox, store, pb } = setup({
+    items: [{ id: 'milch', text: 'Milch', checked: false }],
+    failures: { listItems: httpError(0) },
+  });
+  store.set('snapshot', { items: [{ id: 'milch', text: 'Milch', checked: false }], users: [] });
+  const items = pb.collection('items');
+  const original = items.update;
+  // Ben renames the item right after Anna's check-off reached the server; his
+  // event arrives before her answer.
+  items.update = async (...args) => {
+    const result = { ...(await original(...args)) };
+    sync.applyEvent({ action: 'update', record: { id: 'milch', text: 'Hafermilch', checked: true } });
+    return result;
+  };
+  outbox.add({ type: 'setChecked', id: 'milch', checked: true });
+
+  await sync.flush();
+  const milch = store.get('snapshot').items.find((i) => i.id === 'milch');
+  assert.deepEqual([milch.text, milch.checked], ['Hafermilch', true]);
+});
+
 // Purchases load in the background after a flush; this lets them arrive.
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
