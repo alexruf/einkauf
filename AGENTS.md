@@ -99,8 +99,9 @@ Project rules:
   commit. No separate archive commits.
 - **Server logic:** item hooks in `pb_hooks/items.pb.js`, cleanup cron and
   route in `pb_hooks/cleanup.pb.js`, public app-name route in
-  `pb_hooks/app-name.pb.js`; shared code in `pb_hooks/items.js`
-  loaded with `require()` inside each handler.
+  `pb_hooks/app-name.pb.js`, mail refusal (app sends no email) in
+  `pb_hooks/mail.pb.js`; shared code in `pb_hooks/items.js` loaded with
+  `require()` inside each handler.
 
 ## Development Guidelines
 

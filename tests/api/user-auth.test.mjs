@@ -1,18 +1,46 @@
 import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { createServer } from 'node:net';
+import { after, before, beforeEach, test } from 'node:test';
 import { connectRealtime } from '../support/realtime.mjs';
-import { api, createUser, PASSWORD, startServer } from '../support/server.mjs';
+import { api, createUser, PASSWORD, SUPERUSER, startServer } from '../support/server.mjs';
 
 let server;
 let anna;
 let ben;
+// Real family accounts may stay unverified, which keeps verification mails possible.
+let carla;
+
+// Stands in for a mail server. Any connection means PocketBase tried to send
+// an email; the connection is dropped right away, so nothing gets delivered.
+let smtp;
+let smtpConnections = 0;
 
 before(async () => {
+  smtp = createServer((socket) => {
+    smtpConnections++;
+    socket.destroy();
+  });
+  await new Promise((r) => smtp.listen(0, '127.0.0.1', r));
+
   server = await startServer();
+  const settings = await api(server.url, '/api/settings', {
+    method: 'PATCH',
+    token: server.superuserToken,
+    body: { smtp: { enabled: true, host: '127.0.0.1', port: smtp.address().port } },
+  });
+  assert.equal(settings.status, 200, `configuring SMTP failed: ${JSON.stringify(settings.body)}`);
+
   anna = await createUser(server, 'Anna');
   ben = await createUser(server, 'Ben');
+  carla = await createUser(server, 'Carla', { verified: false });
 });
-after(() => server?.stop());
+after(async () => {
+  await server?.stop();
+  smtp?.close();
+});
+beforeEach(() => {
+  smtpConnections = 0;
+});
 
 const newAccount = (name) => ({
   email: `${name.toLowerCase() || 'empty'}-${Date.now()}@example.test`,
@@ -125,4 +153,53 @@ test('given no session, when subscribed to items and an item is added, then no e
     anonymous.close();
     member.close();
   }
+});
+
+// Mails are sent in the background after the response, so wait a moment
+// before concluding that none was sent.
+async function assertNoEmailSent() {
+  await new Promise((r) => setTimeout(r, 500));
+  assert.equal(smtpConnections, 0, 'PocketBase tried to send an email');
+}
+
+async function loginFrom(userAgent, user, collection = 'users') {
+  const res = await fetch(`${server.url}/api/collections/${collection}/auth-with-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': userAgent },
+    body: JSON.stringify({ identity: user.email, password: user.password }),
+  });
+  assert.equal(res.status, 200, `login from ${userAgent} failed: ${await res.text()}`);
+}
+
+test('given a user who logged in before, when they log in from a new device, then no email is sent', async () => {
+  await loginFrom('Laptop', anna);
+  await loginFrom('Phone', anna);
+  await assertNoEmailSent();
+});
+
+test('given a superuser who logged in before, when they log in from a new device, then no email is sent', async () => {
+  await loginFrom('Laptop', SUPERUSER, '_superusers');
+  await loginFrom('Phone', SUPERUSER, '_superusers');
+  await assertNoEmailSent();
+});
+
+for (const action of ['request-password-reset', 'request-verification']) {
+  test(`given no session, when a client calls ${action} for an unverified user, then no email is sent`, async () => {
+    const res = await api(server.url, `/api/collections/users/${action}`, {
+      method: 'POST',
+      body: { email: carla.email },
+    });
+    assert.equal(res.status, 204);
+    await assertNoEmailSent();
+  });
+}
+
+test('given a logged-in user, when they request an email change, then it fails and no email is sent', async () => {
+  const res = await api(server.url, '/api/collections/users/request-email-change', {
+    method: 'POST',
+    token: ben.token,
+    body: { newEmail: `ben-new-${Date.now()}@example.test` },
+  });
+  assert.equal(res.status, 400);
+  await assertNoEmailSent();
 });

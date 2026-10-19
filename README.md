@@ -29,7 +29,7 @@ There is no self-registration. The administrator creates one account per family 
 
 - **email** and **password**: what the person logs in with.
 - **name**: the display name the app shows everywhere, for example "Mama". It is required, at most 30 characters long, and must not start or end with a space. The app never shows email addresses.
-- **verified**: can stay off, because the app sends no emails.
+- **verified**: can stay off, because the app sends no emails. The server refuses every email, including password resets and login alerts, so a forgotten password is reset by the administrator.
 
 Family members can see each other's display names but not their email addresses. Deleting an account keeps the items that person added; the app then shows "Unbekannt" as their author.
 

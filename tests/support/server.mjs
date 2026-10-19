@@ -91,13 +91,13 @@ async function expectOk(promise, what) {
 // Creates a user as superuser and returns { id, email, name, password, token }.
 // The token comes from impersonation so that tests do not use up the login
 // rate limit.
-export async function createUser(server, name) {
+export async function createUser(server, name, { verified = true } = {}) {
   const email = `${name.toLowerCase()}@example.test`;
   const record = await expectOk(
     api(server.url, '/api/collections/users/records', {
       method: 'POST',
       token: server.superuserToken,
-      body: { email, name, password: PASSWORD, passwordConfirm: PASSWORD, verified: true },
+      body: { email, name, password: PASSWORD, passwordConfirm: PASSWORD, verified },
     }),
     `Creating user ${name}`,
   );
