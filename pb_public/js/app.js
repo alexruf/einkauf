@@ -507,13 +507,18 @@ async function connectRealtime() {
   };
   try {
     // PB_CONNECT fires on every (re)connect, which makes it the reliable
-    // signal that the server is reachable again.
-    await pb.realtime.subscribe('PB_CONNECT', () => {
-      setConnection('online');
-      flush();
-      checkVersion();
-    });
-    await pb.collection('items').subscribe('*', (event) => sync.applyEvent(event));
+    // signal that the server is reachable again. The SDK calls it once the
+    // server knows all subscriptions, so both are made together: subscribing
+    // to the items afterwards would leave a gap between the reload that
+    // PB_CONNECT starts and the first item event.
+    await Promise.all([
+      pb.realtime.subscribe('PB_CONNECT', () => {
+        setConnection('online');
+        flush();
+        checkVersion();
+      }),
+      pb.collection('items').subscribe('*', (event) => sync.applyEvent(event)),
+    ]);
   } catch (error) {
     realtimeGaveUp = true;
     console.warn('Realtime connection failed; retrying later', error);

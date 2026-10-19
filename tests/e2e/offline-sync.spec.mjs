@@ -6,6 +6,7 @@ import {
   goOffline,
   goOnline,
   listItems,
+  openAs,
   row,
   rows,
   test,
@@ -13,7 +14,7 @@ import {
   waitForServiceWorker,
 } from '../support/e2e.mjs';
 
-const { ben } = users;
+const { anna, ben } = users;
 
 test.beforeEach(deleteAllItems);
 
@@ -175,4 +176,42 @@ test('given the realtime connection fails right after reconnecting, when the ser
 
   await expect(annaPage.locator('#sync-indicator')).toContainText('Synchronisiert', { timeout: 15000 });
   await expect(annaPage.getByRole('status')).toBeHidden();
+});
+
+test('given Ben adds an item while the app starts listening for changes, when listening begins, then Anna sees it', async ({
+  page,
+}) => {
+  // Item reads still on their way, so the test can wait until all are done.
+  let readsInFlight = 0;
+  const isItemRead = (request) => request.method() === 'GET' && request.url().includes('/api/collections/items/');
+  page.on('request', (request) => isItemRead(request) && readsInFlight++);
+  page.on('requestfinished', (request) => isItemRead(request) && readsInFlight--);
+  page.on('requestfailed', (request) => isItemRead(request) && readsInFlight--);
+  // The request that subscribes to item changes is held back.
+  let held;
+  const subscriptionHeld = new Promise((resolve) => {
+    held = resolve;
+  });
+  let release;
+  const released = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/realtime', async (route) => {
+    if (route.request().method() !== 'POST' || !route.request().postData().includes('items/*')) {
+      await route.fallback();
+      return;
+    }
+    held();
+    await released;
+    await route.continue();
+  });
+
+  await openAs(page, anna);
+  await subscriptionHeld;
+  await expect(page.locator('#empty')).toBeVisible();
+  await expect.poll(() => readsInFlight).toBe(0);
+  await createItem(ben, 'Brot');
+  release();
+
+  await expect(row(page, 'Brot')).toBeVisible();
 });
