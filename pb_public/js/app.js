@@ -549,12 +549,17 @@ function reloadIfIdle() {
   if (updater.takeReload(busy)) location.reload();
 }
 
+// The token refresh on its way, so ending the session can cancel it: the SDK
+// stores a successful answer itself, which would log the user back in.
+let refreshing = null;
+
 // Refreshes the token and the own record, so an active user stays logged
 // in. Offline or with a token that cannot be refreshed, the current one is
 // kept until the server rejects it.
 async function refreshAuth() {
+  refreshing = new AbortController();
   try {
-    await pb.collection('users').authRefresh();
+    await pb.collection('users').authRefresh({ signal: refreshing.signal });
     const user = currentUser();
     if (user) showUserName(user);
   } catch (error) {
@@ -575,9 +580,15 @@ function startSession(user) {
 // Ends the session but keeps the stored data, so the same user can log in
 // again and sync pending changes.
 function endSession(hint) {
+  stopSession();
+  showLogin(hint);
+}
+
+// Stops everything that still acts for the session and forgets its token.
+function stopSession() {
+  refreshing?.abort();
   pb.realtime.unsubscribe().catch(() => {});
   pb.authStore.clear();
-  showLogin(hint);
 }
 
 // Browsers without popover support show the menu inline, so there is
@@ -605,8 +616,7 @@ function requestLogout() {
 }
 
 function logout() {
-  pb.realtime.unsubscribe().catch(() => {});
-  pb.authStore.clear();
+  stopSession();
   store.clear();
   showLogin();
 }

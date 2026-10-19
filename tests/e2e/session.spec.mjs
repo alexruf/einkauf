@@ -6,6 +6,7 @@ import {
   goOnline,
   listItems,
   logOut,
+  openAs,
   row,
   server,
   test,
@@ -98,4 +99,41 @@ test("given Anna's pending changes, when Ben logs in on the same device, then th
   // Give a wrongly kept change time to reach the server before checking.
   await annaPage.waitForTimeout(1000);
   expect((await listItems()).map((i) => i.text)).toEqual(['Milch']);
+});
+
+test('given a token refresh still on its way, when the user logs out, then its answer does not log them back in', async ({
+  page,
+}) => {
+  let reached;
+  const refreshReached = new Promise((resolve) => {
+    reached = resolve;
+  });
+  let release;
+  const released = new Promise((resolve) => {
+    release = resolve;
+  });
+  let answered;
+  const refreshAnswered = new Promise((resolve) => {
+    answered = resolve;
+  });
+  // The app refreshes the token when it starts. The server answers, but the
+  // answer is held back until the user has logged out.
+  await page.route('**/api/collections/users/auth-refresh', async (route) => {
+    reached();
+    const response = await route.fetch();
+    await released;
+    // Fails when the app has cancelled the request meanwhile.
+    await route.fulfill({ response }).catch(() => {});
+    answered();
+  });
+  await openAs(page, anna);
+  await refreshReached;
+
+  await logOut(page);
+  release();
+  await refreshAnswered;
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('pocketbase_auth'))).toBeNull();
 });
