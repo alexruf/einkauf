@@ -3,6 +3,11 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.20.1 (2026-10-20)
+
+### Features
+
+- **web-app:** Keep the header and add field in view while the list scrolls
 ## 2026.10.20.0 (2026-10-20)
 
 ### Features
