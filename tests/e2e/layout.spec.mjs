@@ -68,6 +68,29 @@ test.describe('on a 360 px wide phone', () => {
     await expect(row(page, 'Milch').getByRole('checkbox')).toBeChecked();
   });
 
+  test('given a row with a long note, then the whole note wraps onto further lines and nothing scrolls horizontally', async ({
+    page,
+  }) => {
+    const note = 'die laktosefreie von der kleinen Molkerei am Markt '.repeat(5).slice(0, 200);
+    await createItem(anna, 'Milch', { note });
+    await openAs(page, anna);
+
+    const noteElement = row(page, 'Milch').locator('.note');
+    await expect(noteElement).toHaveText(`· ${note.trim()}`);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    // Several lines, all inside the row: the note is wrapped, not cut off.
+    // Polled, because a re-render after the sync can replace the row while
+    // it is measured.
+    const measure = () =>
+      noteElement.evaluate((el) => {
+        const rowBox = el.closest('.item').getBoundingClientRect();
+        const rects = [...el.getClientRects()];
+        return rects.length > 2 && rects.every((r) => r.left >= rowBox.left && r.right <= rowBox.right + 0.5);
+      });
+    await expect.poll(measure).toBe(true);
+  });
+
   for (const width of [320, 360]) {
     test(`given a row in edit mode at ${width} px, then the field and its buttons fit in the row`, async ({ page }) => {
       await page.setViewportSize({ width, height: 740 });
@@ -77,6 +100,8 @@ test.describe('on a 360 px wide phone', () => {
       const editRow = page.locator('.item.is-editing');
       await expect(editRow).toBeVisible();
 
+      // The text field, the note field and the buttons.
+      await expect(editRow.locator('input')).toHaveCount(2);
       const rowBox = await editRow.boundingBox();
       for (const control of await editRow.locator('input, button').all()) {
         const box = await control.boundingBox();
@@ -159,6 +184,8 @@ test.describe('in a desktop browser', () => {
     await expect(milch.getByRole('button', { name: 'Mehr' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('.item.is-editing').getByLabel('Eintrag')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.item.is-editing').getByLabel('Menge oder Hinweis')).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('.item.is-editing')).toHaveCount(0);
   });

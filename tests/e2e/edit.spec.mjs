@@ -280,3 +280,155 @@ test('given Anna is editing an item, when Ben checks it off, then her row stays 
   await expect(editField(annaPage)).toHaveValue('Milch');
   expect(await annaPage.locator('#items > li').evaluateAll((items) => items.map((li) => li.dataset.id))).toEqual(order);
 });
+
+test.describe('the note', () => {
+  const noteField = (page) => editRow(page).getByLabel('Menge oder Hinweis');
+  const saveButton = (page) => editRow(page).getByRole('button', { name: 'Speichern' });
+
+  test('given an item with a note, when Anna opens it, then text and note are in two fields and the text field has focus', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Milch', { note: '2x' });
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Milch');
+
+    await expect(noteField(annaPage)).toHaveValue('2x');
+    await expect(editField(annaPage)).toBeFocused();
+    expect(await editField(annaPage).evaluate((field) => [field.selectionStart, field.selectionEnd])).toEqual([5, 5]);
+  });
+
+  test('given an item without a note, when Anna opens it, then the empty note field says what it is for', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Brot');
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Brot');
+
+    await expect(noteField(annaPage)).toHaveValue('');
+    await expect(noteField(annaPage)).toHaveAttribute('placeholder', 'Menge oder Hinweis');
+  });
+
+  test('given an item by Anna, when Ben adds a note, then everyone sees it with Ben as last editor', async ({
+    annaPage,
+    benPage,
+  }) => {
+    await createItem(anna, 'Milch');
+    await benPage.reload();
+
+    await startEditing(benPage, 'Milch');
+    await noteField(benPage).fill('2x');
+    await saveButton(benPage).click();
+
+    await expect(row(annaPage, 'Milch').locator('.text')).toHaveText('Milch · 2x', { timeout: 5000 });
+    await expect(row(annaPage, 'Milch').locator('.meta')).toHaveText('von Anna · zuletzt Ben');
+    const [item] = await listItems();
+    expect([item.text, item.note]).toEqual(['Milch', '2x']);
+  });
+
+  test('given an item with a note, when Anna clears the note, then it is removed', async ({ annaPage }) => {
+    await createItem(anna, 'Milch', { note: '2x' });
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Milch');
+    await noteField(annaPage).fill('');
+    await saveButton(annaPage).click();
+
+    await expect(row(annaPage, 'Milch').locator('.text')).toHaveText('Milch');
+    await expect.poll(async () => (await listItems())[0].note).toBe('');
+  });
+
+  test('given a separator in the text field, when Anna saves, then it stays in the text and the note is unchanged', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Joghurt', { note: 'Bio' });
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Joghurt');
+    await save(annaPage, 'Joghurt, laktosefrei');
+
+    await expect(row(annaPage, 'Joghurt').locator('.text')).toHaveText('Joghurt, laktosefrei · Bio');
+    await expect
+      .poll(async () => (await listItems()).map((i) => [i.text, i.note]))
+      .toEqual([['Joghurt, laktosefrei', 'Bio']]);
+  });
+
+  test('given an empty text field and a new note, when Anna saves, then the text stays and the note is saved', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Milch');
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Milch');
+    await editField(annaPage).fill('');
+    await noteField(annaPage).fill('2x');
+    await saveButton(annaPage).click();
+
+    await expect(row(annaPage, 'Milch').locator('.text')).toHaveText('Milch · 2x');
+    await expect.poll(async () => (await listItems()).map((i) => [i.text, i.note])).toEqual([['Milch', '2x']]);
+  });
+
+  test('given an item with a note by Ben, when Anna saves without changes, then Ben stays last editor', async ({
+    annaPage,
+  }) => {
+    await createItem(ben, 'Milch', { note: '2x' });
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Milch');
+    await saveButton(annaPage).click();
+
+    await expect(editRow(annaPage)).toHaveCount(0);
+    await expect(annaPage.locator('.item.is-pending')).toHaveCount(0);
+    const [item] = await listItems();
+    expect([item.text, item.note, item.updatedBy]).toEqual(['Milch', '2x', ben.id]);
+  });
+
+  test('given the note field, when Anna presses Enter there, then the note is saved', async ({ annaPage }) => {
+    await createItem(anna, 'Eier');
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Eier');
+    await noteField(annaPage).fill('10');
+    await noteField(annaPage).press('Enter');
+
+    await expect(editRow(annaPage)).toHaveCount(0);
+    await expect.poll(async () => (await listItems())[0].note).toBe('10');
+  });
+
+  test('given a checked-off item, when Anna adds a note, then it stays checked off', async ({ annaPage }) => {
+    await createItem(anna, 'Brot');
+    await annaPage.reload();
+    await row(annaPage, 'Brot').getByRole('checkbox').check();
+
+    await startEditing(annaPage, 'Brot');
+    await noteField(annaPage).fill('Vollkorn');
+    await saveButton(annaPage).click();
+
+    await expect(row(annaPage, 'Brot').locator('.text')).toHaveText('Brot · Vollkorn');
+    await expect(row(annaPage, 'Brot').getByRole('checkbox')).toBeChecked();
+    await expect.poll(async () => (await listItems()).map((i) => [i.note, i.checked])).toEqual([['Vollkorn', true]]);
+  });
+
+  test('given Anna is typing a note, when Ben adds an item, then her text, note and cursor stay', async ({
+    annaPage,
+    benPage,
+  }) => {
+    await createItem(anna, 'Milch');
+    await annaPage.reload();
+
+    await startEditing(annaPage, 'Milch');
+    await editField(annaPage).fill('Hafermilch');
+    await noteField(annaPage).fill('2 Packungen');
+    await noteField(annaPage).evaluate((field) => field.setSelectionRange(1, 1));
+
+    await benPage.getByLabel('Neuer Eintrag').fill('Eier');
+    await benPage.getByRole('button', { name: 'Hinzufügen' }).click();
+    await expect(row(annaPage, 'Eier')).toBeVisible({ timeout: 5000 });
+
+    await expect(editField(annaPage)).toHaveValue('Hafermilch');
+    await expect(noteField(annaPage)).toHaveValue('2 Packungen');
+    await expect(noteField(annaPage)).toBeFocused();
+    expect(await noteField(annaPage).evaluate((field) => [field.selectionStart, field.selectionEnd])).toEqual([1, 1]);
+  });
+});

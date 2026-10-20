@@ -219,6 +219,54 @@ test('given Anna buys "Kaffee" for the first time, then Ben is offered it after 
   await expect(option(benPage, 'Kaffee')).toBeVisible();
 });
 
+test('given "Milch" was bought, when Anna types "milch, 2", then "Milch" is suggested', async ({ annaPage }) => {
+  await withPurchases(annaPage, [['Milch', 3]]);
+
+  await field(annaPage).fill('milch, 2');
+
+  await expect(option(annaPage, 'Milch')).toBeVisible();
+});
+
+test('given Anna typed "mi; 2x", when she taps "Milch", then "Milch" is added with the note "2x"', async ({
+  annaPage,
+}) => {
+  await withPurchases(annaPage, [['Milch', 3]]);
+
+  await field(annaPage).fill('mi; 2x');
+  await option(annaPage, 'Milch').click();
+
+  await expect(rows(annaPage).locator('.text')).toHaveText(['Milch · 2x']);
+  await expect(field(annaPage)).toHaveValue('');
+  await expect(field(annaPage)).toBeFocused();
+});
+
+test('given Anna typed "mi, 2x", when she presses the down arrow and Enter, then the first suggestion is added with the note', async ({
+  annaPage,
+}) => {
+  await withPurchases(annaPage, [
+    ['Milch', 5],
+    ['Mineralwasser', 1],
+  ]);
+
+  await field(annaPage).fill('mi, 2x');
+  await field(annaPage).press('ArrowDown');
+  await field(annaPage).press('Enter');
+
+  await expect(rows(annaPage).locator('.text')).toHaveText(['Milch · 2x']);
+  await expect(field(annaPage)).toHaveValue('');
+});
+
+test('given "Milch · 2x" is an open item, when Anna types "mi", then "Milch" is marked as on the list', async ({
+  annaPage,
+}) => {
+  await createItem(anna, 'Milch', { note: '2x' });
+  await withPurchases(annaPage, [['Milch', 3]]);
+
+  await field(annaPage).fill('mi');
+
+  await expect(option(annaPage, 'Milch steht schon drauf')).toHaveAttribute('aria-disabled', 'true');
+});
+
 test.describe('on a 360 px wide phone', () => {
   test.use({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
 

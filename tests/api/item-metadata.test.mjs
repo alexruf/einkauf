@@ -97,6 +97,27 @@ test('given Anna created an item, when Ben changes its text claiming Anna, then 
   assert.equal(res.body.updatedBy, ben.id);
 });
 
+test('given a note with surrounding whitespace, when creating an item, then the note is trimmed', async () => {
+  const res = await createItem(anna, { text: 'Milch', note: ' 2x ' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.note, '2x');
+});
+
+test('given a note with surrounding whitespace, when changing an item, then the note is trimmed', async () => {
+  const item = (await createItem(anna, { text: 'Sahne' })).body;
+  const res = await updateItem(anna, item.id, { note: ' 0,5 l ' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.note, '0,5 l');
+});
+
+test('given Anna created an item, when Ben changes only its note, then Anna stays creator and Ben is last editor', async () => {
+  const item = (await createItem(anna, { text: 'Joghurt' })).body;
+  const res = await updateItem(ben, item.id, { note: 'laktosefrei' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.createdBy, anna.id);
+  assert.equal(res.body.updatedBy, ben.id);
+});
+
 test('given the superuser, when it sets checkedAt, then the value is kept', async () => {
   const item = (await createItem(anna, { text: 'Mehl' })).body;
   const res = await api(server.url, `${ITEMS}/${item.id}`, {

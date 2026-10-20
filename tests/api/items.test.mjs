@@ -75,6 +75,47 @@ test('given an item, when a family member changes its text to 201 characters, th
   assert.equal((await getItem(item.id)).body.text, 'Senf');
 });
 
+test('given a family member, when creating an item with a note, then the note is stored', async () => {
+  const res = await createItem({ text: 'Milch', note: '2x' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.note, '2x');
+});
+
+test('given a family member, when creating an item without a note, then the note is empty', async () => {
+  const res = await createItem({ text: 'Mehl' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.note, '');
+});
+
+test('given a family member, when creating an item with a note of 200 characters, then it is stored', async () => {
+  const res = await createItem({ text: 'Tee', note: 'x'.repeat(200) });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.note.length, 200);
+});
+
+test('given a family member, when creating an item with a note of 201 characters, then it is refused', async () => {
+  const res = await createItem({ text: 'Tee', note: 'x'.repeat(201) });
+  assert.equal(res.status, 400);
+  assert.ok(res.body.data.note);
+});
+
+test('given an item, when a family member changes its note to 201 characters, then it is refused and the note is unchanged', async () => {
+  const item = (await createItem({ text: 'Reis', note: '1 kg' })).body;
+  const res = await updateItem(item.id, { note: 'x'.repeat(201) });
+  assert.equal(res.status, 400);
+  assert.equal((await getItem(item.id)).body.note, '1 kg');
+});
+
+test('given a checked item, when a family member changes only its note, then the text and checked state stay', async () => {
+  const item = (await createItem({ text: 'Milch', checked: true })).body;
+  const res = await updateItem(item.id, { note: '2x' });
+  assert.equal(res.status, 200);
+  const stored = (await getItem(item.id)).body;
+  assert.equal(stored.note, '2x');
+  assert.equal(stored.text, 'Milch');
+  assert.equal(stored.checked, true);
+});
+
 test('given an item, when a family member checks it off, then it is checked', async () => {
   const item = (await createItem({ text: 'Butter' })).body;
   const res = await api(server.url, `${ITEMS}/${item.id}`, {

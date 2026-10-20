@@ -3,12 +3,14 @@
 // top-level functions.
 
 // Sets the fields that clients must not control: who created and last changed
-// the item, when it was checked off, and the trimmed text. Values sent by the
-// client for these fields are overwritten, so forging them has no effect.
+// the item, when it was checked off, and the trimmed text and note. Values
+// sent by the client for these fields are overwritten, so forging them has no
+// effect.
 function applyMemberWrite(record, auth, isCreate) {
   const original = isCreate ? null : record.original();
 
   record.set("text", record.getString("text").trim());
+  record.set("note", record.getString("note").trim());
   if (isCreate) {
     record.set("createdBy", auth.id);
   } else {

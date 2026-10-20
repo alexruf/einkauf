@@ -3,9 +3,10 @@
 // code path.
 //
 // Operations, all safe to send more than once:
-//   { type: 'create', id, text }
+//   { type: 'create', id, text, note }
 //   { type: 'setChecked', id, checked }   (an absolute value, never a toggle)
 //   { type: 'setText', id, text }         (the whole new text)
+//   { type: 'setNote', id, note }         (the whole new note; '' clears it)
 //   { type: 'setClaimed', id, claimed }   (an absolute value, never a toggle)
 //   { type: 'delete', id }                (an item already gone counts as done)
 // Each one also gets `opId` to identify it and `at`, the local time of the

@@ -2,7 +2,7 @@
 // date. Takes the PocketBase client and the stores as parameters, so it can be
 // tested with fakes.
 
-const ITEM_FIELDS = 'id,text,checked,checkedAt,created,createdBy,updatedBy,claimedBy,claimedAt';
+const ITEM_FIELDS = 'id,text,note,checked,checkedAt,created,createdBy,updatedBy,claimedBy,claimedAt';
 
 // How a failed request affects the rest of the outbox.
 function classify(op, error) {
@@ -13,8 +13,7 @@ function classify(op, error) {
   // Too many requests or a server problem: the change itself is fine, so keep
   // it and try again on the next trigger.
   if (status === 429 || status >= 500) return 'retry';
-  if (status === 404 && (op.type === 'setChecked' || op.type === 'setText' || op.type === 'setClaimed'))
-    return 'deleted';
+  if (status === 404 && ['setChecked', 'setText', 'setNote', 'setClaimed'].includes(op.type)) return 'deleted';
   // The item is gone, which is what the delete was for: the first attempt
   // arrived with its response lost, or someone else deleted it.
   if (status === 404 && op.type === 'delete') return 'done';
@@ -52,11 +51,14 @@ export function createSync({
   // Returns what the server confirmed.
   async function send(op) {
     if (op.type === 'create') {
-      return saved(await items().create({ id: op.id, text: op.text }));
+      // Changes stored before notes existed have none.
+      return saved(await items().create({ id: op.id, text: op.text, note: op.note ?? '' }));
     } else if (op.type === 'setChecked') {
       return saved(await items().update(op.id, { checked: op.checked }));
     } else if (op.type === 'setText') {
       return saved(await items().update(op.id, { text: op.text }));
+    } else if (op.type === 'setNote') {
+      return saved(await items().update(op.id, { note: op.note }));
     } else if (op.type === 'setClaimed') {
       // The server records whoever sends the claim; the own id only says
       // "claimed", an empty value says "released".

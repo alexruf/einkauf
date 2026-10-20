@@ -153,3 +153,87 @@ test('given an item whose creator account was removed, then it shows "Unbekannt"
   await annaPage.reload();
   await expect(row(annaPage, 'Salz').locator('.meta')).toHaveText('von Unbekannt');
 });
+
+test('given an item with a note, then everyone sees the note after the text, muted', async ({ annaPage, benPage }) => {
+  await createItem(users.anna, 'Milch', { note: '2x' });
+
+  for (const page of [annaPage, benPage]) {
+    await expect(row(page, 'Milch').locator('.text')).toHaveText('Milch · 2x');
+    const note = row(page, 'Milch').locator('.text .note');
+    await expect(note).toHaveText('· 2x');
+    const [noteColor, metaColor] = await Promise.all([
+      note.evaluate((el) => getComputedStyle(el).color),
+      row(page, 'Milch')
+        .locator('.meta')
+        .evaluate((el) => getComputedStyle(el).color),
+    ]);
+    expect(noteColor).toBe(metaColor);
+  }
+});
+
+test('given an item without a note, then its row shows no note and no middle dot', async ({ annaPage }) => {
+  await createItem(users.anna, 'Brot');
+  await expect(row(annaPage, 'Brot').locator('.text')).toHaveText('Brot');
+  await expect(row(annaPage, 'Brot').locator('.note')).toHaveCount(0);
+});
+
+test('given a note with markup, then everyone sees exactly that text and no script runs', async ({
+  annaPage,
+  benPage,
+}) => {
+  const markup = '<img src=x onerror=alert(1)>';
+  let dialogs = 0;
+  for (const page of [annaPage, benPage]) page.on('dialog', () => dialogs++);
+
+  await createItem(users.anna, 'Milch', { note: markup });
+  for (const page of [annaPage, benPage]) {
+    await expect(row(page, 'Milch').locator('.note')).toHaveText(`· ${markup}`);
+    await expect(page.locator('#items img')).toHaveCount(0);
+  }
+  expect(dialogs).toBe(0);
+});
+
+test('given an item with a note, when Anna checks it off, then the note is struck through with the text', async ({
+  annaPage,
+}) => {
+  await createItem(users.anna, 'Milch', { note: '2x' });
+  await row(annaPage, 'Milch').getByRole('checkbox').check();
+
+  const done = annaPage.locator('#done-items > li').filter({ hasText: 'Milch' });
+  await expect(done).toHaveClass(/is-checked/);
+  // The note sits inside the struck text, so one line runs across both.
+  await expect(done.locator('.text .note')).toHaveText('· 2x');
+});
+
+test('given Anna enters "Milch, 2x", then everyone sees the text "Milch" with the note "2x"', async ({
+  annaPage,
+  benPage,
+}) => {
+  await add(annaPage, 'Milch, 2x');
+
+  await expect(row(benPage, 'Milch').locator('.text')).toHaveText('Milch · 2x');
+  await expect(row(annaPage, 'Milch').locator('.pending')).toBeHidden();
+  const [stored] = await listItems();
+  expect(stored.text).toBe('Milch');
+  expect(stored.note).toBe('2x');
+});
+
+test('given Anna enters "Sahne 0,5 l", then the decimal comma stays in the text', async ({ annaPage }) => {
+  await add(annaPage, 'Sahne 0,5 l');
+
+  await expect(row(annaPage, 'Sahne').locator('.text')).toHaveText('Sahne 0,5 l');
+  await expect(row(annaPage, 'Sahne').locator('.pending')).toBeHidden();
+  const [stored] = await listItems();
+  expect(stored.text).toBe('Sahne 0,5 l');
+  expect(stored.note).toBe('');
+});
+
+test('given Anna enters ";2x", then the whole entry is the text', async ({ annaPage }) => {
+  await add(annaPage, ';2x');
+
+  await expect(row(annaPage, ';2x').locator('.text')).toHaveText(';2x');
+  await expect(row(annaPage, ';2x').locator('.pending')).toBeHidden();
+  const [stored] = await listItems();
+  expect(stored.text).toBe(';2x');
+  expect(stored.note).toBe('');
+});

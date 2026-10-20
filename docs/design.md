@@ -20,7 +20,7 @@ why the icons never need to be redrawn when colors change.
 | `--surface` | fields, buttons, the row in edit mode |
 | `--raised` | layers above the page: the account menu, dialogs and suggestions |
 | `--text` | item text and titles |
-| `--muted` | meta lines, checked-off items, secondary labels |
+| `--muted` | meta lines, notes after the item text, checked-off items, secondary labels |
 | `--line` | separators and borders |
 | `--accent` | checking off and the primary button |
 | `--claim` | the stripe and tint of a claimed item |
@@ -53,6 +53,12 @@ so it also works offline; the system font is the fallback.
 | Section headers and buttons | 15 to 16 px, semibold |
 | Meta line | 14 px |
 | Status bar | 12 px |
+
+An item's note, such as the quantity in "Milch · 2x", follows the text in
+the same size but in the muted color, after a middle dot. In a checked-off
+row both are muted, and the dot still keeps them apart. A long note wraps
+with the text instead of being cut off, because in the shop the note is
+often the part that matters.
 
 Labels are written in sentence case. Nothing is set in capitals.
 

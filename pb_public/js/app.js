@@ -3,6 +3,7 @@
 
 import PocketBase from '/vendor/pocketbase.es.mjs';
 import { createAppName } from './app-name.js';
+import { splitEntry } from './entry.js';
 import { createHold } from './hold.js';
 import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
@@ -236,6 +237,15 @@ function rowElement(row) {
   // Item text is user input: only ever set it as text, never as HTML.
   const text = li.querySelector('.text');
   text.textContent = row.text;
+  // Inside .text, so the strike-through runs on across the note. The space
+  // lets a long entry break before the dot; the no-break space after it
+  // keeps the dot from ending a line on its own.
+  if (row.note) {
+    const note = document.createElement('span');
+    note.className = 'note';
+    note.textContent = `·\u00a0${row.note}`;
+    text.append(' ', note);
+  }
   if (row.checked && strikes.has(row.id)) {
     li.classList.add('is-striking');
     text.style.animationDelay = `${strikes.get(row.id) - performance.now()}ms`;
@@ -261,25 +271,38 @@ function rowElement(row) {
 
 // Edit mode
 
-// The row in edit mode, or null. `draft` and `selection` survive re-renders,
-// so typing is not interrupted when the list changes meanwhile.
+// The row in edit mode, or null. `draft` and `selection` hold the text and
+// note fields' content and cursor, and `field` names the one focused last.
+// They survive re-renders, so typing is not interrupted when the list changes
+// meanwhile.
 let editing = null;
+
+// The text and note fields of the row in edit mode on screen, or null.
+function editFields() {
+  const li = document.querySelector('.item.is-editing');
+  return li && { id: li.dataset.id, text: li.querySelector('.edit-text'), note: li.querySelector('.edit-note') };
+}
 
 function editRowElement(row) {
   const li = $('edit-template').content.firstElementChild.cloneNode(true);
   li.dataset.id = row.id;
   li.style.viewTransitionName = `item-${row.id}`;
-  const field = li.querySelector('.edit-text');
-  field.value = editing.draft;
-  // The sticky add field covers the top of the list; scroll-margin-top keeps
-  // the row below it.
-  field.addEventListener('focus', () => li.scrollIntoView({ block: 'nearest' }));
+  const fields = { text: li.querySelector('.edit-text'), note: li.querySelector('.edit-note') };
+  for (const [name, field] of Object.entries(fields)) {
+    field.value = editing.draft[name];
+    field.addEventListener('focus', () => {
+      editing.field = name;
+      // The sticky add field covers the top of the list; scroll-margin-top
+      // keeps the row below it.
+      li.scrollIntoView({ block: 'nearest' });
+    });
+  }
   li.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') cancelEdit();
   });
   li.querySelector('.edit-form').addEventListener('submit', (event) => {
     event.preventDefault();
-    saveEdit(field.value);
+    saveEdit({ text: fields.text.value, note: fields.note.value });
   });
   li.querySelector('.edit-cancel').addEventListener('click', cancelEdit);
   li.querySelector('.edit-delete').addEventListener('click', deleteEdited);
@@ -292,7 +315,13 @@ function openEdit(row) {
   // type right away. iOS only opens the keyboard for focus set during the
   // tap, which holds because opening never starts an animated render.
   const end = row.text.length;
-  editing = { id: row.id, draft: row.text, selection: [end, end], focused: true };
+  editing = {
+    id: row.id,
+    draft: { text: row.text, note: row.note },
+    selection: { text: [end, end], note: [row.note.length, row.note.length] },
+    field: 'text',
+    focused: true,
+  };
   // The row keeps its place while it is edited, even if someone else checks
   // it off meanwhile.
   hold.pin(row.id, { checked: row.checked, checkedAt: row.checkedAt });
@@ -312,11 +341,13 @@ function cancelEdit() {
   reloadIfIdle();
 }
 
-function saveEdit(value) {
+// Only the text is compared with the other open items; the note never makes
+// an item a different one.
+function saveEdit({ text, note }) {
   const { id } = editing;
   const user = currentUser();
   const edited = currentRows(user).find((row) => row.id === id);
-  const existing = edited && !edited.checked && findOpenItem(openRows(user), value, id);
+  const existing = edited && !edited.checked && findOpenItem(openRows(user), text, id);
   if (existing) {
     // The edit stays open with the typed text, so the user can change it. The
     // list does not scroll, which would push the field away from the keyboard.
@@ -325,7 +356,8 @@ function saveEdit(value) {
     return;
   }
   closeEdit();
-  setText(id, value);
+  setText(id, text);
+  setNote(id, note);
   render();
   document.querySelector(`.items [data-id="${CSS.escape(id)}"] .more`)?.focus();
   reloadIfIdle();
@@ -341,23 +373,25 @@ function deleteEdited() {
 }
 
 function rememberEditField() {
-  const field = document.querySelector('.edit-text');
-  // The field on screen may still belong to a row that was just closed.
-  if (!editing || field?.closest('.item').dataset.id !== editing.id) return;
-  editing.draft = field.value;
-  editing.selection = [field.selectionStart, field.selectionEnd];
-  editing.focused = document.activeElement === field;
+  const fields = editFields();
+  // The fields on screen may still belong to a row that was just closed.
+  if (!editing || fields?.id !== editing.id) return;
+  for (const name of ['text', 'note']) {
+    editing.draft[name] = fields[name].value;
+    editing.selection[name] = [fields[name].selectionStart, fields[name].selectionEnd];
+  }
+  editing.focused = document.activeElement === fields.text || document.activeElement === fields.note;
 }
 
 function restoreEditField() {
-  const field = document.querySelector('.edit-text');
+  const field = editFields()?.[editing.field];
   if (!field) return;
   field.focus({ preventScroll: true });
-  field.setSelectionRange(...editing.selection);
+  field.setSelectionRange(...editing.selection[editing.field]);
 }
 
-function addItem(text) {
-  outbox.add({ type: 'create', id: newId(), text });
+function addItem(text, note) {
+  outbox.add({ type: 'create', id: newId(), text, note });
   render();
   flush();
 }
@@ -391,7 +425,9 @@ function updateSuggestions() {
   const active = user && !suggestionsDismissed && document.activeElement === input;
   const openTexts = active ? openRows(user).map((row) => row.text) : [];
   const previous = suggestions[selected]?.text;
-  suggestions = active ? suggest(store.get('snapshot')?.purchases, input.value, openTexts) : [];
+  // A note typed after a separator is not part of what is searched.
+  const query = splitEntry(input.value).text;
+  suggestions = active ? suggest(store.get('snapshot')?.purchases, query, openTexts) : [];
   // Keep the keyboard selection on the same text if it is still selectable.
   selected = suggestions.findIndex((s) => s.text === previous && !s.onList);
   renderSuggestions();
@@ -441,12 +477,13 @@ function moveSelection(step) {
 }
 
 // The field keeps the focus, so the phone keyboard stays open for the next
-// item.
+// item. A note typed after a separator is added with the suggestion.
 function chooseSuggestion(index) {
   const suggestion = suggestions[index];
   if (!suggestion || suggestion.onList) return;
+  const { note } = splitEntry($('new-item').value);
   $('new-item').value = '';
-  addItem(suggestion.text);
+  addItem(suggestion.text, note);
   updateSuggestions();
   reloadIfIdle();
 }
@@ -480,6 +517,16 @@ function setText(id, value) {
   const current = buildRows(store.get('snapshot'), outbox.list(), currentUser().id).find((row) => row.id === id);
   if (!text || !current || current.text === text) return;
   outbox.add({ type: 'setText', id, text });
+  render();
+  flush();
+}
+
+// Like setText: an unchanged note adds no change. An empty one clears it.
+function setNote(id, value) {
+  const note = value.trim();
+  const current = buildRows(store.get('snapshot'), outbox.list(), currentUser().id).find((row) => row.id === id);
+  if (!current || current.note === note) return;
+  outbox.add({ type: 'setNote', id, note });
   render();
   flush();
 }
@@ -682,11 +729,12 @@ $('login-form').addEventListener('submit', (event) => {
 $('add-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const input = $('new-item');
-  const text = input.value.trim();
+  const { text, note } = splitEntry(input.value);
   input.value = '';
+  // Only the text counts: a typed note does not make the item a different one.
   const existing = text && findOpenItem(openRows(currentUser()), text);
   if (existing) pointAt(existing, { scroll: true });
-  else if (text) addItem(text);
+  else if (text) addItem(text, note);
   updateSuggestions();
   reloadIfIdle();
 });

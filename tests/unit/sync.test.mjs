@@ -218,6 +218,54 @@ test('given a pending text change, when flushing, then only the text is sent and
   assert.deepEqual(outbox.list(), []);
 });
 
+test('given a pending create with a note, when flushing, then text and note are sent', async () => {
+  const { sync, outbox, server } = setup();
+  outbox.add({ type: 'create', id: 'milch', text: 'Milch', note: '2x' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.equal(server.get('milch').text, 'Milch');
+  assert.equal(server.get('milch').note, '2x');
+});
+
+test('given a pending create stored without a note, when flushing, then an empty note is sent', async () => {
+  const { sync, outbox, server } = setup();
+  outbox.add({ type: 'create', id: 'milch', text: 'Milch' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.equal(server.get('milch').note, '');
+});
+
+test('given a pending note change, when flushing, then only the note is sent and stored in the snapshot', async () => {
+  const { sync, outbox, server, store, updates } = setup({ items: [{ id: 'milch', text: 'Milch', note: '' }] });
+  outbox.add({ type: 'setNote', id: 'milch', note: '2x' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(updates, [['milch', { note: '2x' }]]);
+  assert.equal(server.get('milch').text, 'Milch');
+  assert.equal(store.get('snapshot').items[0].note, '2x');
+  assert.deepEqual(outbox.list(), []);
+});
+
+test('given a note change of an item deleted on the server, when flushing, then it is dropped and the rest is sent', async () => {
+  const { sync, outbox, server, events } = setup({ items: [{ id: 'brot', text: 'Brot' }] });
+  outbox.add({ type: 'setNote', id: 'milch', note: '2x' });
+  outbox.add({ type: 'setNote', id: 'brot', note: 'Vollkorn' });
+
+  assert.equal(await sync.flush(), 'done');
+  assert.deepEqual(outbox.list(), []);
+  assert.equal(server.get('brot').note, 'Vollkorn');
+  assert.deepEqual(events.rejected, []);
+});
+
+test('given items with notes, when reloading or receiving realtime events, then the notes are kept in the snapshot', async () => {
+  const { sync, store } = setup({ items: [{ id: 'milch', text: 'Milch', note: '2x' }] });
+
+  await sync.flush();
+  assert.equal(store.get('snapshot').items[0].note, '2x');
+  sync.applyEvent({ action: 'create', record: { id: 'brot', text: 'Brot', note: 'Vollkorn', checked: false } });
+  assert.equal(store.get('snapshot').items.find((i) => i.id === 'brot').note, 'Vollkorn');
+});
+
 test('given a text change of an item deleted on the server, when flushing, then it is dropped and the rest is sent', async () => {
   const { sync, outbox, server, events } = setup({ items: [{ id: 'brot', text: 'Brot' }] });
   outbox.add({ type: 'setText', id: 'milch', text: 'Hafermilch' });

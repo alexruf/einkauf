@@ -649,6 +649,11 @@ main {
   background: linear-gradient(currentColor, currentColor) no-repeat 0 60% / 0 2px;
 }
 
+/* A quantity or hint after the item text; see rowElement in app.js. */
+.note {
+  color: var(--muted);
+}
+
 .meta,
 .pending {
   display: block;
@@ -795,7 +800,8 @@ main {
   content: none;
 }
 
-.edit-text {
+.edit-text,
+.edit-note {
   font-size: var(--size-item);
 }
 

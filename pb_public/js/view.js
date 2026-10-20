@@ -26,6 +26,7 @@ export function buildRows(snapshot, ops, me, held = new Map()) {
       byId.set(op.id, {
         id: op.id,
         text: op.text,
+        note: op.note ?? '',
         checked: false,
         checkedAt: '',
         created: op.at,
@@ -47,6 +48,8 @@ export function buildRows(snapshot, ops, me, held = new Map()) {
       });
     } else if (op.type === 'setText' && item) {
       byId.set(op.id, { ...item, text: op.text, updatedBy: me, pending: true });
+    } else if (op.type === 'setNote' && item) {
+      byId.set(op.id, { ...item, note: op.note, updatedBy: me, pending: true });
     } else if (op.type === 'setClaimed' && item && !item.checked) {
       // The server ignores claims of checked items, so they are not shown.
       byId.set(op.id, { ...item, claimedBy: op.claimed ? me : '', updatedBy: me, pending: true });
@@ -77,6 +80,8 @@ export function buildRows(snapshot, ops, me, held = new Map()) {
     return {
       id: item.id,
       text: item.text,
+      // Items stored before notes existed have none.
+      note: item.note ?? '',
       checked: item.checked,
       section: sortKey.checked ? 'done' : 'open',
       pending: item.pending,

@@ -156,6 +156,39 @@ test.describe('editing', () => {
     expect((await listItems()).map((i) => i.text).sort()).toEqual(['Brot', 'Milch']);
   });
 
+  test('given open "Milch · 2x" and "Brot", when Anna saves "Brot" as "Milch" with the note "1x", then nothing is saved', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Milch', { note: '2x' });
+    await createItem(anna, 'Brot');
+    await annaPage.reload();
+
+    await exactRow(annaPage, 'Brot').getByRole('button', { name: 'Mehr' }).click();
+    await editField(annaPage).fill('Milch');
+    await editRow(annaPage).getByLabel('Menge oder Hinweis').fill('1x');
+    await editRow(annaPage).getByRole('button', { name: 'Speichern' }).click();
+
+    await expect(editField(annaPage)).toHaveValue('Milch');
+    await expect(editRow(annaPage).getByLabel('Menge oder Hinweis')).toHaveValue('1x');
+    await expect(exactRow(annaPage, 'Milch ·\\s2x')).toHaveClass(/is-highlighted/);
+    expect((await listItems()).map((i) => [i.text, i.note]).sort()).toEqual([
+      ['Brot', ''],
+      ['Milch', '2x'],
+    ]);
+  });
+
+  test('given an open "Milch", when Anna adds the note "2x" to it, then it is saved', async ({ annaPage }) => {
+    await createItem(anna, 'Milch');
+    await annaPage.reload();
+
+    await exactRow(annaPage, 'Milch').getByRole('button', { name: 'Mehr' }).click();
+    await editRow(annaPage).getByLabel('Menge oder Hinweis').fill('2x');
+    await editRow(annaPage).getByRole('button', { name: 'Speichern' }).click();
+
+    await expect(editRow(annaPage)).toHaveCount(0);
+    await expect(rowTexts(annaPage)).toHaveText(['Milch · 2x']);
+  });
+
   test('given an open "milch", when Anna saves it as "Milch", then it is saved', async ({ annaPage }) => {
     await createItem(anna, 'milch');
     await annaPage.reload();
@@ -195,5 +228,37 @@ test.describe('editing', () => {
     await expect(editRow(annaPage)).toHaveCount(0);
     await expect(exactRow(annaPage, 'Milch')).toHaveCount(2);
     await expect(annaPage.locator('.item.is-highlighted')).toHaveCount(0);
+  });
+});
+
+test.describe('adding with a note', () => {
+  test('given an open "Milch", when Anna enters "Milch, 2x", then nothing is added and "Milch" keeps no note', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Milch');
+    await annaPage.reload();
+
+    await add(annaPage, 'Milch, 2x');
+
+    await expect(field(annaPage)).toHaveValue('');
+    await expect(exactRow(annaPage, 'Milch')).toHaveClass(/is-highlighted/);
+    await expect(annaPage.getByRole('status')).toHaveText('„Milch“ steht schon drauf.');
+    await expect(rowTexts(annaPage)).toHaveText(['Milch']);
+    const items = await listItems();
+    expect(items).toHaveLength(1);
+    expect(items[0].note).toBe('');
+  });
+
+  test('given an open "Milch · 2x", when Anna adds "milch", then nothing is added and it is pointed out', async ({
+    annaPage,
+  }) => {
+    await createItem(anna, 'Milch', { note: '2x' });
+    await annaPage.reload();
+
+    await add(annaPage, 'milch');
+
+    await expect(exactRow(annaPage, 'Milch ·\\s2x')).toHaveClass(/is-highlighted/);
+    await expect(annaPage.getByRole('status')).toHaveText('„Milch“ steht schon drauf.');
+    expect(await listItems()).toHaveLength(1);
   });
 });

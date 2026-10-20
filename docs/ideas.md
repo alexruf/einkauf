@@ -63,11 +63,3 @@ Simple categories such as fruit and vegetables or the fridge section, with
 the open list grouped by them, would match the walk through a shop. The
 category could be remembered per text in the purchases collection, so after
 the first time an item is sorted automatically.
-
-### Quantity or note as its own field
-
-Today a quantity or a note is part of the text ("Milch 2x", "Joghurt, die
-laktosefreie"). That works, but each variant becomes its own suggestion, and
-"Milch" and "Milch 2x" do not count as the same purchase. A separate field
-would keep the text clean for suggestions, duplicate detection and
-categories.

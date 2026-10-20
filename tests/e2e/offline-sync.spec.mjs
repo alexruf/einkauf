@@ -215,3 +215,50 @@ test('given Ben adds an item while the app starts listening for changes, when li
 
   await expect(row(page, 'Brot')).toBeVisible();
 });
+
+async function saveNote(page, text, note) {
+  await row(page, text).getByRole('button', { name: 'Mehr' }).click();
+  const editRow = page.locator('.item.is-editing');
+  await editRow.getByLabel('Menge oder Hinweis').fill(note);
+  await editRow.getByRole('button', { name: 'Speichern' }).click();
+  await expect(editRow).toHaveCount(0);
+}
+
+test('given Anna adds and edits notes offline, when she reconnects, then Ben sees both notes', async ({
+  annaPage,
+  benPage,
+}) => {
+  await annaGoesOffline(annaPage, ['Milch']);
+
+  await add(annaPage, 'Eier, 10');
+  await saveNote(annaPage, 'Milch', '2x');
+  await expect(row(annaPage, 'Eier').locator('.text')).toHaveText('Eier · 10');
+  await expect(row(annaPage, 'Milch').locator('.text')).toHaveText('Milch · 2x');
+  await expect(pending(annaPage, 'Eier')).toBeVisible();
+  await expect(pending(annaPage, 'Milch')).toBeVisible();
+
+  await goOnline(annaPage);
+
+  await expect(row(benPage, 'Eier').locator('.text')).toHaveText('Eier · 10', { timeout: 10000 });
+  await expect(row(benPage, 'Milch').locator('.text')).toHaveText('Milch · 2x');
+  await expect(annaPage.locator('.item.is-pending')).toHaveCount(0);
+});
+
+test('given Anna changes a note offline while Ben changes the text online, when she reconnects, then both changes remain', async ({
+  annaPage,
+  benPage,
+}) => {
+  await annaGoesOffline(annaPage, ['Milch']);
+  await saveNote(annaPage, 'Milch', '2x');
+
+  await row(benPage, 'Milch').getByRole('button', { name: 'Mehr' }).click();
+  await benPage.locator('.item.is-editing').getByLabel('Eintrag').fill('Hafermilch');
+  await benPage.locator('.item.is-editing').getByRole('button', { name: 'Speichern' }).click();
+  await expect.poll(async () => (await listItems()).map((i) => i.text)).toEqual(['Hafermilch']);
+
+  await goOnline(annaPage);
+
+  for (const page of [annaPage, benPage]) {
+    await expect(row(page, 'Hafermilch').locator('.text')).toHaveText('Hafermilch · 2x', { timeout: 10000 });
+  }
+});

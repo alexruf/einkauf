@@ -81,6 +81,17 @@ test('given an edited item, when it is checked off, then the new text is counted
   assert.equal(await findPurchase('umbenannt'), null);
 });
 
+test('given an item with a note, when it is checked off, then only its text counts as a purchase', async () => {
+  await createPurchase('Notizmilch', { count: 3 });
+  const item = (
+    await api(server.url, ITEMS, { method: 'POST', token: anna.token, body: { text: 'Notizmilch', note: '2x' } })
+  ).body;
+  await updateItem(item.id, { checked: true });
+  assert.equal((await findPurchase('notizmilch')).count, 4);
+  assert.equal(await findPurchase('notizmilch 2x'), null);
+  assert.equal(await findPurchase('2x'), null);
+});
+
 test('given a check-off, when the same check-off arrives again, then it counts once', async () => {
   const item = await addAndCheck('Doppelt Gesendet');
   const res = await updateItem(item.id, { checked: true });

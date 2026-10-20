@@ -26,8 +26,9 @@ export async function deleteAllItems() {
   }
 }
 
-export async function createItem(user, text) {
-  const res = await api(server.url, ITEMS, { method: 'POST', token: user.token, body: { text } });
+// `fields` adds further item fields, such as a note.
+export async function createItem(user, text, fields = {}) {
+  const res = await api(server.url, ITEMS, { method: 'POST', token: user.token, body: { text, ...fields } });
   if (res.status !== 200) throw new Error(`Creating "${text}" failed: ${JSON.stringify(res.body)}`);
   return res.body;
 }

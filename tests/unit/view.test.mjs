@@ -116,6 +116,44 @@ test('given a pending create, then it is shown as open, pending, by me, and sort
   assert.equal(rows[1].pending, false);
 });
 
+test('given a pending create with a note, then its row has that note', () => {
+  const ops = [{ type: 'create', id: 'milch', text: 'Milch', note: '2x', at: '2026-10-17T07:00:00.000Z' }];
+  const [row] = buildRows({ users, items: [] }, ops, 'ben');
+  assert.equal(row.text, 'Milch');
+  assert.equal(row.note, '2x');
+});
+
+test('given a pending create stored without a note, then its row has an empty note', () => {
+  const ops = [{ type: 'create', id: 'milch', text: 'Milch', at: '2026-10-17T07:00:00.000Z' }];
+  assert.equal(buildRows({ users, items: [] }, ops, 'ben')[0].note, '');
+});
+
+test('given a snapshot item stored without a note, then its row has an empty note', () => {
+  assert.equal(buildRows({ users, items: [item('Milch')] }, [], 'anna')[0].note, '');
+});
+
+test('given a pending note change, then only the note changes, the row is pending and I am last editor', () => {
+  const snapshot = {
+    users,
+    items: [item('Milch', { note: '1x', checked: true, checkedAt: '2026-10-17 09:00:00.000Z' })],
+  };
+  const ops = [{ type: 'setNote', id: 'Milch', note: '2x', at: '2026-10-17T10:00:00.000Z' }];
+  const [row] = buildRows(snapshot, ops, 'ben');
+  assert.equal(row.note, '2x');
+  assert.equal(row.text, 'Milch');
+  assert.equal(row.checked, true);
+  assert.equal(row.pending, true);
+  assert.equal(
+    buildRows({ ...snapshot, items: [item('Milch', { note: '1x' })] }, ops, 'ben')[0].meta,
+    'von Anna · zuletzt Ben',
+  );
+});
+
+test('given a pending note change of an item missing from the snapshot, then no row is shown', () => {
+  const ops = [{ type: 'setNote', id: 'Milch', note: '2x', at: '2026-10-17T10:00:00.000Z' }];
+  assert.deepEqual(buildRows({ users, items: [] }, ops, 'ben'), []);
+});
+
 test('given a pending check-off, then the item is shown checked and pending', () => {
   const snapshot = { users, items: [item('Milch'), item('Brot')] };
   const ops = [{ type: 'setChecked', id: 'Milch', checked: true, at: '2026-10-17T10:00:00.000Z' }];
