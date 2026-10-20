@@ -118,11 +118,16 @@ with `placeholder="Menge oder Hinweis"`, `aria-label="Menge oder Hinweis"`,
 `.edit-form`, so Enter in either field submits the form and the row's
 Escape handler covers both.
 
-`editing` becomes `{ id, draft: { text, note }, focus }`, where `focus` is
-`{ field: 'text' | 'note', selection }` or `null`. `rememberEditField`
-reads both inputs and which one has focus. `restoreEditField` focuses that
-one with its selection. Opening still focuses the text field with the
-cursor at the end.
+`editing` becomes `{ id, draft: { text, note }, selection: { text, note },
+field, focused }`. Each field keeps its own draft and cursor, also after it
+loses focus. `field` names the field focused last, and a focus listener on
+each input sets it. `focused` says whether one of the two has focus.
+`rememberEditField` reads both inputs, and `restoreEditField` focuses
+`field` with its selection. Tracking the last focused field separately from
+`focused` matters after a rejected duplicate save. The tap on "Speichern"
+has moved the focus to the button by then, yet the focus must go back to
+the field the user was typing in. Opening still focuses the text field with
+the cursor at the end.
 
 `saveEdit({ text, note })` keeps the order it has today. First the
 duplicate check runs on the text only, and on a match nothing is saved and

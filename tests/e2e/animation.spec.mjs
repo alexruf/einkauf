@@ -35,6 +35,24 @@ test('given the default motion setting, when a row moves, then the move is anima
   expect(await page.evaluate(() => window.transitions)).toBeGreaterThan(0);
 });
 
+test('given an item with a note is checked off, then one line is drawn across text and note', async ({ page }) => {
+  await createItem(anna, 'Milch', { note: '2x' });
+  await openAs(page, anna);
+  await row(page, 'Milch').getByRole('checkbox').check();
+
+  const text = row(page, 'Milch').locator('.text');
+  await expect(row(page, 'Milch')).toHaveClass(/is-striking/);
+  await expect(text.locator('.note')).toHaveText('· 2x');
+  // The line is the background of .text, drawn by its animation. The note
+  // inside it draws no line of its own, so the stroke runs on across it.
+  expect(await text.evaluate((el) => getComputedStyle(el).animationName)).toBe('strike');
+  await expect.poll(() => text.evaluate((el) => getComputedStyle(el).backgroundSize)).toBe('100% 2px');
+  const note = await text
+    .locator('.note')
+    .evaluate((el) => [getComputedStyle(el).backgroundImage, getComputedStyle(el).animationName]);
+  expect(note).toEqual(['none', 'none']);
+});
+
 test.describe('when the user prefers reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 
