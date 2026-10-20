@@ -88,6 +88,12 @@ test.describe('adding', () => {
     await add(annaPage, 'Milch');
 
     await expect(exactRow(annaPage, 'Milch')).toBeInViewport();
+    // Fully below the header, which stays at the top.
+    const gap = () =>
+      exactRow(annaPage, 'Milch').evaluate(
+        (li) => li.getBoundingClientRect().top - document.querySelector('header').getBoundingClientRect().bottom,
+      );
+    await expect.poll(gap).toBeGreaterThanOrEqual(0);
   });
 
   test('given the device is offline, when Anna adds "Käse" twice, then there is one row', async ({ annaPage }) => {

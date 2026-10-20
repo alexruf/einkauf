@@ -1,4 +1,4 @@
-import { createItem, deleteAllItems, expect, listItems, openAs, row, test, users } from '../support/e2e.mjs';
+import { createItem, deleteAllItems, expect, listItems, openAs, row, rows, test, users } from '../support/e2e.mjs';
 
 const { anna, ben } = users;
 
@@ -112,6 +112,75 @@ test.describe('on a 360 px wide phone', () => {
       expect(overflow).toBeLessThanOrEqual(0);
     });
   }
+
+  test('given the list is not scrolled, then the add field is between the header row and the first row', async ({
+    page,
+  }) => {
+    await createItem(anna, 'Milch');
+    await openAs(page, anna);
+    await expect(row(page, 'Milch')).toBeVisible();
+
+    const account = await page.locator('.account-button').boundingBox();
+    const form = await page.locator('#add-form').boundingBox();
+    const first = await row(page, 'Milch').boundingBox();
+    expect(form.y).toBeGreaterThanOrEqual(account.y + account.height);
+    expect(first.y).toBeGreaterThanOrEqual(form.y + form.height);
+
+    // Rows scrolled into view and the account menu rely on this height.
+    const heights = await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement('div'));
+      probe.style.height = 'var(--header-height)';
+      return [probe.getBoundingClientRect().height, document.querySelector('header').getBoundingClientRect().height];
+    });
+    expect(Math.abs(heights[0] - heights[1])).toBeLessThanOrEqual(0.5);
+  });
+
+  test('given a long list, when it is scrolled down, then the header and the add field stay at the top', async ({
+    page,
+  }) => {
+    for (let i = 1; i <= 40; i++) await createItem(anna, `Sorte ${i}`);
+    await openAs(page, anna);
+    await expect(rows(page)).toHaveCount(40);
+    const parts = [page.locator('#app-name'), page.locator('.account-button'), page.getByLabel('Neuer Eintrag')];
+    const before = await Promise.all(parts.map(async (part) => (await part.boundingBox()).y));
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+
+    for (const [i, part] of parts.entries()) {
+      expect(Math.abs((await part.boundingBox()).y - before[i])).toBeLessThanOrEqual(1);
+    }
+    // The rows pass beneath the header: just above the header's bottom edge
+    // and at its left, where a row's checkbox would be, the header is on top.
+    // Polled, because while rows slide after the sync the transition's
+    // overlay takes all hits.
+    const covered = () =>
+      page.evaluate(() => {
+        const header = document.querySelector('header');
+        const hit = document.elementFromPoint(20, header.getBoundingClientRect().bottom - 2);
+        return header.contains(hit);
+      });
+    await expect.poll(covered).toBe(true);
+  });
+
+  test('given rows slide to a new place, then the header stays above them', async ({ page }) => {
+    await openAs(page, anna);
+    // Sliding rows are drawn in a layer above the page. A header with a
+    // transition name of its own is drawn there too, in its usual order
+    // above the rows, instead of being covered by them.
+    const name = await page.locator('header').evaluate((el) => getComputedStyle(el).viewTransitionName);
+    expect(name).not.toBe('none');
+  });
+
+  test('given the list, then the status bar is flat and rows slide beneath it', async ({ page }) => {
+    await openAs(page, anna);
+    const footer = page.locator('footer');
+    await expect(footer).toContainText('Synchronisiert');
+
+    expect((await footer.boundingBox()).height).toBeLessThanOrEqual(36);
+    // Like the header, see above.
+    expect(await footer.evaluate((el) => getComputedStyle(el).viewTransitionName)).not.toBe('none');
+  });
 
   test('given the login screen, then nothing scrolls horizontally', async ({ page }) => {
     await page.goto('/');

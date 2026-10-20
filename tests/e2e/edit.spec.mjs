@@ -91,6 +91,27 @@ test.describe('on a phone', () => {
   });
 });
 
+test('given a row partly under the header, when Anna opens it, then the edit row is scrolled below the header', async ({
+  annaPage,
+}) => {
+  for (let i = 1; i <= 30; i++) await createItem(anna, `Sorte ${i}`);
+  await annaPage.reload();
+  await expect(row(annaPage, 'Sorte 30')).toBeVisible();
+  // The top of "Sorte 15" slips under the header; its buttons stay clickable.
+  await row(annaPage, 'Sorte 15').evaluate((li) => {
+    const header = document.querySelector('header').getBoundingClientRect().bottom;
+    window.scrollBy(0, li.getBoundingClientRect().top - (header - 20));
+  });
+
+  await startEditing(annaPage, 'Sorte 15');
+
+  const gap = () =>
+    editRow(annaPage).evaluate(
+      (li) => li.getBoundingClientRect().top - document.querySelector('header').getBoundingClientRect().bottom,
+    );
+  await expect.poll(gap).toBeGreaterThanOrEqual(0);
+});
+
 test('given the edit mode, when Anna cancels, then the text stays', async ({ annaPage }) => {
   await createItem(anna, 'Butter');
   await annaPage.reload();

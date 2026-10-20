@@ -46,6 +46,12 @@
   --radius-box: 0.5rem;
   --tap: 2.75rem;
 
+  /* Height of the sticky header on the list screen: the bar row with its
+     safe-area padding, the add field with its padding, and the bottom line.
+     Must follow the paddings of .bar and .add. */
+  --bar-height: calc(max(0.75rem, env(safe-area-inset-top)) + var(--tap) + 0.25rem);
+  --header-height: calc(var(--bar-height) + 4.5rem + 1px);
+
   --font: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --size-title: 1.75rem;
   --size-item: 1.0625rem;
@@ -146,13 +152,31 @@ input[type="password"] {
 }
 
 /* One centered column on wide screens; full width on phones. */
-.bar,
+.top-inner,
 .status,
 main {
   max-width: 40rem;
   margin: 0 auto;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Header: stays at the top while the list scrolls beneath it, like the
+   status bar at the bottom. Its base is the page color rather than the
+   status bar's surface color, so the add field keeps its edge. The safe-area
+   padding of the bar row belongs to this element, so when it sticks its
+   background also covers the area behind the system status bar. Its own
+   transition name keeps it above rows that slide during a transition, which
+   are drawn in a layer above the page. */
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  view-transition-name: header;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .bar {
@@ -224,7 +248,7 @@ main {
 .account-menu {
   position: fixed;
   inset: auto;
-  top: calc(max(0.75rem, env(safe-area-inset-top)) + var(--tap) + 0.25rem);
+  top: var(--bar-height);
   right: max(1rem, env(safe-area-inset-right), calc((100vw - 40rem) / 2 + 1rem));
   min-width: 12rem;
   max-width: calc(100vw - 2rem);
@@ -310,13 +334,18 @@ main {
 }
 
 /* Status bar: fixed to the bottom, content aligned with the column above.
-   Translucent, so the list shows through faintly when scrolled under it. */
+   Translucent, so the list shows through faintly when scrolled under it.
+   It holds no controls, so its text may reach into the area reserved for
+   the home indicator; about 23 px between the text and the screen's edge
+   keep it clear of the indicator. Its own transition name keeps it above
+   rows that slide during a transition, like the header. */
 .footer {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  padding-bottom: env(safe-area-inset-bottom);
+  view-transition-name: footer;
+  padding-bottom: max(0px, calc(env(safe-area-inset-bottom) - 1rem));
   border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
   background: color-mix(in srgb, var(--surface) 75%, transparent);
   -webkit-backdrop-filter: blur(12px);
@@ -331,7 +360,7 @@ main {
   gap: 0.25rem;
   max-width: 40rem;
   margin: 0 auto;
-  padding: 0.4375rem max(1rem, env(safe-area-inset-right)) 0.4375rem max(1rem, env(safe-area-inset-left));
+  padding: 0.3125rem max(1rem, env(safe-area-inset-right)) 0.3125rem max(1rem, env(safe-area-inset-left));
 }
 
 /* A dot plus text on a faint tint of the state's color. */
@@ -484,16 +513,13 @@ main {
   }
 }
 
-/* The add field stays at the top while scrolling, where the phone keyboard
-   cannot cover it. */
+/* The add field is part of the header, so it stays at the top while
+   scrolling, where the phone keyboard cannot cover it. */
 .add {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  position: relative;
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem 0;
-  background: var(--bg);
 }
 
 .add input {
@@ -785,8 +811,8 @@ main {
 
 /* Edit mode: the row turns into a field with its actions below. */
 .items > li {
-  /* Keeps a row scrolled into view clear of the sticky add field. */
-  scroll-margin-top: 5rem;
+  /* Keeps a row scrolled into view clear of the sticky header. */
+  scroll-margin-top: calc(var(--header-height) + 0.5rem);
 }
 
 .item.is-editing {

@@ -88,6 +88,7 @@ function showLogin(hint = '') {
   $('confirm-logout').close();
   lastLayout = null;
   $('list-screen').hidden = true;
+  $('add-form').hidden = true;
   $('account').hidden = true;
   $('login-screen').hidden = false;
   $('login-hint').textContent = hint;
@@ -102,6 +103,7 @@ function showLogin(hint = '') {
 function showList(user) {
   $('login-screen').hidden = true;
   $('list-screen').hidden = false;
+  $('add-form').hidden = false;
   $('account').hidden = false;
   showUserName(user);
   render();
@@ -292,7 +294,7 @@ function editRowElement(row) {
     field.value = editing.draft[name];
     field.addEventListener('focus', () => {
       editing.field = name;
-      // The sticky add field covers the top of the list; scroll-margin-top
+      // The sticky header covers the top of the list; scroll-margin-top
       // keeps the row below it.
       li.scrollIntoView({ block: 'nearest' });
     });

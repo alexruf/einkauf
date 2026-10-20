@@ -13,20 +13,36 @@
   <script type="module" src="/js/app.js"></script>
 </head>
 <body>
-  <header class="bar">
-    <h1><img class="app-icon" src="/icons/icon.svg" alt=""><span id="app-name">Einkauf</span></h1>
-    <div class="account" id="account" hidden>
-      <button type="button" class="account-button" popovertarget="account-menu" aria-haspopup="menu">
-        <span class="user-name" id="user-name"></span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-      <div class="account-menu" id="account-menu" popover>
-        <p class="menu-header">Angemeldet als <strong class="menu-user-name" id="menu-user-name"></strong></p>
-        <button type="button" class="menu-item danger-text" id="logout">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 17l5-5-5-5M21 12H9"/></svg>
-          Abmelden
-        </button>
+  <!-- The header and the add field stay at the top while the list scrolls
+       beneath them, like the status bar at the bottom. -->
+  <header class="top">
+    <div class="top-inner">
+      <div class="bar">
+        <h1><img class="app-icon" src="/icons/icon.svg" alt=""><span id="app-name">Einkauf</span></h1>
+        <div class="account" id="account" hidden>
+          <button type="button" class="account-button" popovertarget="account-menu" aria-haspopup="menu">
+            <span class="user-name" id="user-name"></span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="account-menu" id="account-menu" popover>
+            <p class="menu-header">Angemeldet als <strong class="menu-user-name" id="menu-user-name"></strong></p>
+            <button type="button" class="menu-item danger-text" id="logout">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 17l5-5-5-5M21 12H9"/></svg>
+              Abmelden
+            </button>
+          </div>
+        </div>
       </div>
+      <form class="add" id="add-form" hidden>
+        <input type="text" id="new-item" name="text" maxlength="200" autocomplete="off" enterkeyhint="done"
+          placeholder="Was wird gebraucht?" aria-label="Neuer Eintrag"
+          role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false">
+        <button type="submit" class="primary add-button" aria-label="Hinzufügen" title="Hinzufügen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <!-- Past purchases matching the typed text; filled by app.js. -->
+        <div class="suggestions" id="suggestions" role="listbox" aria-label="Vorschläge" hidden></div>
+      </form>
     </div>
   </header>
 
@@ -67,16 +83,6 @@
     </section>
 
     <section class="list" id="list-screen" hidden>
-      <form class="add" id="add-form">
-        <input type="text" id="new-item" name="text" maxlength="200" autocomplete="off" enterkeyhint="done"
-          placeholder="Was wird gebraucht?" aria-label="Neuer Eintrag"
-          role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false">
-        <button type="submit" class="primary add-button" aria-label="Hinzufügen" title="Hinzufügen">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-        <!-- Past purchases matching the typed text; filled by app.js. -->
-        <div class="suggestions" id="suggestions" role="listbox" aria-label="Vorschläge" hidden></div>
-      </form>
       <ul class="items" id="items"></ul>
       <div class="empty" id="empty" hidden>
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9l3-5M16 9l-3-5M4 9h16l-2 11H6z"/><path d="M9 14l2 2 4-4"/></svg>

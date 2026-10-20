@@ -70,6 +70,20 @@ checkbox. Only layers that float above the page cast a shadow, which means
 the account menu, dialogs and the suggestions below the add field. Rows stay flat, without cards, and their
 separators start where the text starts, which keeps the list calm.
 
+Two bars frame the list and stay in place while it scrolls: the header at
+the top, with the app name, the account menu and the add field, and the
+status bar at the bottom. Both are translucent with a blur and a thin line
+on the edge that faces the list, so the rows can be seen passing beneath
+them. Neither casts a shadow, because they belong to the page rather than
+floating above it. The header is based on the page color, while the status
+bar is based on the surface color. The add field is drawn in the surface
+color, so on a surface-colored header it would lose its edge.
+
+The status bar is kept flat, because the header already takes room from the
+list. It holds no buttons, so on phones with a home indicator its text may
+reach into the area the system reserves at the bottom of the screen. It
+keeps enough distance that it never touches the indicator.
+
 The checkbox is drawn by the app instead of the browser, so it looks the
 same on every platform. The native one shows as a black square in iOS dark
 mode.

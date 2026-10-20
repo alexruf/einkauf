@@ -34,6 +34,23 @@ test('given the open account menu, then it names the logged-in user and dims the
   expect(backdrop).not.toBe('rgba(0, 0, 0, 0)');
 });
 
+test('given a scrolled list, when the account menu is opened, then it opens below the name', async ({ annaPage }) => {
+  for (let i = 1; i <= 40; i++) await createItem(anna, `Sorte ${i}`);
+  await annaPage.reload();
+  await expect(row(annaPage, 'Sorte 40')).toBeVisible();
+  await annaPage.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => annaPage.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+
+  await menuButton(annaPage).click();
+
+  const button = await menuButton(annaPage).boundingBox();
+  const menu = annaPage.locator('#account-menu');
+  await expect(menu).toBeInViewport({ ratio: 1 });
+  const box = await menu.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(button.y + button.height);
+  expect(box.y - (button.y + button.height)).toBeLessThanOrEqual(16);
+});
+
 test('given the account menu, when it is opened from the name and Escape is pressed, then it closes again', async ({
   annaPage,
 }) => {
