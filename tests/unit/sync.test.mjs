@@ -140,6 +140,29 @@ test('given a network error, when flushing, then it stops, keeps the remaining c
   assert.ok(!calls.some(([name]) => name === 'listItems'), 'no reload while offline');
 });
 
+// The SDK answers with an empty object when it cannot read the body of a
+// successful response, for example while the page reloads.
+for (const [name, method, op] of [
+  ['a create', 'create', { type: 'create', id: 'eier', text: 'Eier' }],
+  ['a check-off', 'update', { type: 'setChecked', id: 'milch', checked: true }],
+]) {
+  test(`given ${name} whose answer has no record, when flushing, then it stays in the outbox and the snapshot is unchanged`, async () => {
+    const { sync, outbox, store, pb, events } = setup({ items: [{ id: 'milch', text: 'Milch', checked: false }] });
+    const before = { items: [{ id: 'milch', text: 'Milch', checked: false }], users: [] };
+    store.set('snapshot', before);
+    pb.collection('items')[method] = async () => ({});
+    outbox.add(op);
+
+    assert.equal(await sync.flush(), 'offline');
+    assert.deepEqual(
+      outbox.list().map((entry) => entry.type),
+      [op.type],
+    );
+    assert.deepEqual(store.get('snapshot'), before);
+    assert.equal(events.offline, 1);
+  });
+}
+
 test('given an expired session, when flushing, then it stops, keeps the changes and asks for login', async () => {
   const { sync, outbox, events } = setup({ failures: { 'create:a': httpError(401) } });
   outbox.add({ type: 'create', id: 'a', text: 'A' });

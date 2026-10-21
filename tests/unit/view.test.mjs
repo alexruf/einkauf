@@ -132,6 +132,10 @@ test('given a snapshot item stored without a note, then its row has an empty not
   assert.equal(buildRows({ users, items: [item('Milch')] }, [], 'anna')[0].note, '');
 });
 
+test('given a snapshot item stored without an id, then it is not shown', () => {
+  assert.deepEqual(texts(buildRows({ users, items: [{}, item('Milch')] }, [], 'anna')), ['Milch']);
+});
+
 test('given a pending note change, then only the note changes, the row is pending and I am last editor', () => {
   const snapshot = {
     users,

@@ -44,8 +44,14 @@ export function createSync({
   const items = () => pb.collection('items');
 
   // What the server confirmed, in the form of a realtime event, so it is
-  // applied to the snapshot the same way.
-  const saved = (record) => ({ action: 'update', record });
+  // applied to the snapshot the same way. When the SDK cannot read the body
+  // of a successful answer, for example because the page reloads meanwhile,
+  // it returns an empty object. That counts as a broken connection, so the
+  // change stays in the outbox and is sent again later.
+  const saved = (record) => {
+    if (!record?.id) throw Object.assign(new Error('Server answer without a record'), { status: 0 });
+    return { action: 'update', record };
+  };
   const gone = (id) => ({ action: 'delete', record: { id } });
 
   // Returns what the server confirmed.

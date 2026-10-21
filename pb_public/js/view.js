@@ -17,6 +17,10 @@ const toMs = (date) => (date ? Date.parse(date.replace(' ', 'T')) : 0);
 export function buildRows(snapshot, ops, me, held = new Map()) {
   const byId = new Map();
   for (const item of snapshot?.items ?? []) {
+    // Older versions could store an empty item when an answer from the
+    // server was cut off. Showing it would break the list, and the next
+    // reload from the server replaces it.
+    if (!item.id) continue;
     byId.set(item.id, { ...item, pending: false });
   }
 
