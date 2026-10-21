@@ -89,11 +89,16 @@ Project rules:
   e2e server raises only the general `/api/` limit (`global-setup.mjs`).
 - **Frontend layout:** `pb_public/js/app.js` is DOM wiring only; logic in
   DOM-free modules (`ids`, `storage`, `app-name`, `prefs`, `outbox`, `view`,
-  `hold`, `suggest`, `entry`, `sync`, `update`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
+  `hold`, `suggest`, `entry`, `sync`, `update`, `i18n`, `version`) with unit tests. `version.js`: CalVer `YYYY.0M.0D.MICRO`,
   written only by `make release`; never edit it by hand. All writes go
   through the outbox. New files in `pb_public/` must be added to `SHELL` in
   `sw.js` (a test enforces it). CSP is a meta tag in
   `index.html`: no inline scripts/styles, item text only via `textContent`.
+- **UI text:** only via the catalog `pb_public/js/messages/de.js`: `t`/`tParts`
+  from `i18n.js` in code, `data-i18n`/`data-i18n-{aria-label,title,placeholder}`
+  in `index.html` (markup holds no text except the app name). Keys are
+  string literals, never built at runtime. Values: `{placeholder}` and plural
+  forms (`{ one, other }`), no markup. Tests check used vs. catalog keys.
 - **OpenSpec flow:** apply, verify, then `/opsx:archive` (sync specs)
   before committing; code, main specs and archived change go into one
   commit. No separate archive commits. `docs/ideas.md` is an unscheduled

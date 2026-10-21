@@ -25,23 +25,24 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="account-menu" id="account-menu" popover>
-            <p class="menu-header">Angemeldet als <strong class="menu-user-name" id="menu-user-name"></strong></p>
+            <!-- Filled by app.js, which puts the name where the catalog text has it. -->
+            <p class="menu-header" id="menu-header"><strong class="menu-user-name" id="menu-user-name"></strong></p>
             <button type="button" class="menu-item danger-text" id="logout">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 17l5-5-5-5M21 12H9"/></svg>
-              Abmelden
+              <span data-i18n="account.logout"></span>
             </button>
           </div>
         </div>
       </div>
       <form class="add" id="add-form" hidden>
         <input type="text" id="new-item" name="text" maxlength="200" autocomplete="off" enterkeyhint="done"
-          placeholder="Was wird gebraucht?" aria-label="Neuer Eintrag"
+          data-i18n-placeholder="add.placeholder" data-i18n-aria-label="add.label"
           role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false">
-        <button type="submit" class="primary add-button" aria-label="Hinzufügen" title="Hinzufügen">
+        <button type="submit" class="primary add-button" data-i18n-aria-label="add.submit" data-i18n-title="add.submit">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         <!-- Past purchases matching the typed text; filled by app.js. -->
-        <div class="suggestions" id="suggestions" role="listbox" aria-label="Vorschläge" hidden></div>
+        <div class="suggestions" id="suggestions" role="listbox" data-i18n-aria-label="suggestion.list" hidden></div>
       </form>
     </div>
   </header>
@@ -51,33 +52,38 @@
   <main>
     <section class="login" id="login-screen" hidden>
       <form id="login-form" novalidate>
-        <h2>Anmelden</h2>
+        <!-- biome-ignore lint/a11y/useHeadingContent: app.js fills in the text from the catalog at start -->
+        <h2 data-i18n="login.title"></h2>
         <p class="hint" id="login-hint" hidden></p>
+        <!-- biome-ignore lint/a11y/noLabelWithoutControl: app.js fills in the text from the catalog at start -->
         <label>
-          E-Mail
+          <span data-i18n="login.email"></span>
           <input type="email" name="email" autocomplete="username" required>
         </label>
+        <!-- biome-ignore lint/a11y/noLabelWithoutControl: app.js fills in the text from the catalog at start -->
         <label>
-          Passwort
+          <span data-i18n="login.password"></span>
           <input type="password" name="password" autocomplete="current-password" required>
         </label>
         <p class="error" id="login-error" role="alert" hidden></p>
-        <button type="submit" class="primary">Anmelden</button>
+        <button type="submit" class="primary" data-i18n="login.submit"></button>
       </form>
       <details class="install-hint">
-        <summary>App installieren</summary>
-        <p>Auf dem Smartphone oder Tablet lässt sich die Einkaufsliste wie eine App auf den Home-Bildschirm legen.</p>
-        <h3>iPhone / iPad (Safari)</h3>
+        <summary data-i18n="install.title"></summary>
+        <p data-i18n="install.intro"></p>
+        <!-- biome-ignore lint/a11y/useHeadingContent: app.js fills in the text from the catalog at start -->
+        <h3 data-i18n="install.ios.title"></h3>
         <ol>
-          <li>Seite in Safari öffnen.</li>
-          <li>Auf das Teilen-Symbol tippen (Quadrat mit Pfeil nach oben).</li>
-          <li>„Zum Home-Bildschirm“ wählen und mit „Hinzufügen“ bestätigen.</li>
+          <li data-i18n="install.ios.step1"></li>
+          <li data-i18n="install.ios.step2"></li>
+          <li data-i18n="install.ios.step3"></li>
         </ol>
-        <h3>Android (Chrome)</h3>
+        <!-- biome-ignore lint/a11y/useHeadingContent: app.js fills in the text from the catalog at start -->
+        <h3 data-i18n="install.android.title"></h3>
         <ol>
-          <li>Seite in Chrome öffnen.</li>
-          <li>Oben rechts auf das Menü tippen (drei Punkte).</li>
-          <li>„App installieren“ oder „Zum Startbildschirm hinzufügen“ wählen und bestätigen.</li>
+          <li data-i18n="install.android.step1"></li>
+          <li data-i18n="install.android.step2"></li>
+          <li data-i18n="install.android.step3"></li>
         </ol>
       </details>
     </section>
@@ -86,7 +92,7 @@
       <ul class="items" id="items"></ul>
       <div class="empty" id="empty" hidden>
         <svg class="empty-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9l3-5M16 9l-3-5M4 9h16l-2 11H6z"/><path d="M9 14l2 2 4-4"/></svg>
-        <p><strong>Alles erledigt.</strong> Was wird als Nächstes gebraucht?</p>
+        <p><strong data-i18n="empty.title"></strong> <span data-i18n="empty.prompt"></span></p>
       </div>
       <section class="done" id="done" hidden>
         <button type="button" class="done-toggle" id="done-toggle" aria-expanded="false" aria-controls="done-items">
@@ -116,26 +122,27 @@
     <form method="dialog">
       <p id="logout-question"></p>
       <div class="actions">
-        <button type="submit" value="cancel">Abbrechen</button>
-        <button type="submit" value="logout" class="danger">Abmelden</button>
+        <button type="submit" value="cancel" data-i18n="logout.cancel"></button>
+        <button type="submit" value="logout" class="danger" data-i18n="logout.confirm"></button>
       </div>
     </form>
   </dialog>
 
   <template id="item-template">
     <li class="item">
+      <!-- biome-ignore lint/a11y/noLabelWithoutControl: app.js fills in the item text when it renders the row -->
       <label class="toggle">
         <input type="checkbox">
         <span class="body">
           <span class="text"></span>
           <span class="meta"></span>
-          <span class="pending">nicht synchronisiert</span>
+          <span class="pending" data-i18n="item.pending"></span>
         </span>
       </label>
       <button type="button" class="claim">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 4.5a1.5 1.5 0 0 1 3 0V11M14 5.5a1.5 1.5 0 0 1 3 0V12M17 8.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8l-2.7-3.6a1.5 1.5 0 0 1 2.4-1.8L8 15"/></svg>
       </button>
-      <button type="button" class="more" aria-label="Mehr" title="Mehr">
+      <button type="button" class="more" data-i18n-aria-label="item.more" data-i18n-title="item.more">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="18.5" cy="12" r="1.8"/></svg>
       </button>
     </li>
@@ -146,15 +153,15 @@
   <template id="edit-template">
     <li class="item is-editing">
       <form class="edit-form">
-        <input type="text" class="edit-text" maxlength="200" autocomplete="off" enterkeyhint="done" aria-label="Eintrag">
+        <input type="text" class="edit-text" maxlength="200" autocomplete="off" enterkeyhint="done" data-i18n-aria-label="edit.text">
         <input type="text" class="edit-note" maxlength="200" autocomplete="off" enterkeyhint="done"
-          placeholder="Menge oder Hinweis" aria-label="Menge oder Hinweis">
+          data-i18n-placeholder="edit.note" data-i18n-aria-label="edit.note">
         <div class="edit-actions">
-          <button type="button" class="edit-delete" aria-label="Löschen" title="Löschen">
+          <button type="button" class="edit-delete" data-i18n-aria-label="edit.delete" data-i18n-title="edit.delete">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
           </button>
-          <button type="button" class="edit-cancel">Abbrechen</button>
-          <button type="submit" class="primary">Speichern</button>
+          <button type="button" class="edit-cancel" data-i18n="edit.cancel"></button>
+          <button type="submit" class="primary" data-i18n="edit.save"></button>
         </div>
       </form>
     </li>

@@ -5,6 +5,7 @@ import PocketBase from '/vendor/pocketbase.es.mjs';
 import { createAppName } from './app-name.js';
 import { splitEntry } from './entry.js';
 import { createHold } from './hold.js';
+import { LOCALE, t, tParts } from './i18n.js';
 import { newId } from './ids.js';
 import { createOutbox } from './outbox.js';
 import { createPrefs } from './prefs.js';
@@ -32,8 +33,8 @@ const sync = createSync({
   outbox,
   onChange: render,
   onOffline: () => setConnection('offline'),
-  onAuthError: () => endSession('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'),
-  onRejected: () => showNotice('Eine Änderung wurde vom Server abgelehnt und verworfen.'),
+  onAuthError: () => endSession(t('session.expired')),
+  onRejected: () => showNotice(t('notice.rejected')),
   onPurchases: () => updateSuggestions(),
 });
 const updater = createUpdater({ running: VERSION, backend: sessionStorage });
@@ -62,6 +63,20 @@ let noticeTimer;
 
 const currentUser = () =>
   pb.authStore.isValid && pb.authStore.record?.collectionName === 'users' ? pb.authStore.record : null;
+
+// Texts
+
+// index.html only names its texts by key. Template contents are separate
+// fragments, so they get their own pass; every row cloned from them then
+// already has its texts.
+function fillTexts(root) {
+  for (const element of root.querySelectorAll('[data-i18n]')) element.textContent = t(element.dataset.i18n);
+  for (const name of ['aria-label', 'title', 'placeholder']) {
+    for (const element of root.querySelectorAll(`[data-i18n-${name}]`)) {
+      element.setAttribute(name, t(element.getAttribute(`data-i18n-${name}`)));
+    }
+  }
+}
 
 // Screens
 
@@ -109,10 +124,15 @@ function showList(user) {
   render();
 }
 
-// In the header and in the account menu.
+// In the header and in the account menu. The catalog decides where the
+// name goes in the menu's sentence.
 function showUserName(user) {
   $('user-name').textContent = user.name;
-  $('menu-user-name').textContent = user.name;
+  const name = $('menu-user-name');
+  name.textContent = user.name;
+  $('menu-header').replaceChildren(
+    ...tParts('account.signedInAs').map((part) => (typeof part === 'string' ? part : name)),
+  );
 }
 
 function setConnection(state) {
@@ -144,7 +164,7 @@ function showNotice(text) {
 
 function renderStatus() {
   const loggedIn = !$('list-screen').hidden;
-  const text = notice || (loggedIn && connection === 'offline' ? 'Offline – Änderungen werden später übertragen.' : '');
+  const text = notice || (loggedIn && connection === 'offline' ? t('notice.offline') : '');
   $('status').textContent = text;
   $('status').hidden = !text;
   const pending = outbox.list().length;
@@ -213,7 +233,7 @@ function renderList() {
   $('done-items').replaceChildren(...done.map(toElement));
   $('empty').hidden = open.length > 0;
   $('done').hidden = done.length === 0;
-  $('done-label').textContent = `Erledigt (${done.length})`;
+  $('done-label').textContent = t('done.toggle', { count: done.length });
   const doneOpen = prefs.doneOpen();
   $('done-toggle').setAttribute('aria-expanded', String(doneOpen));
   $('done-items').hidden = !doneOpen;
@@ -407,7 +427,7 @@ function pointAt(row, { scroll }) {
     render();
   }, HIGHLIGHT_MS);
   highlighted = { id: row.id, start: performance.now(), timer };
-  showNotice(`„${row.text}“ steht schon drauf.`);
+  showNotice(t('notice.duplicate', { text: row.text }));
   render();
   if (scroll) document.querySelector(`.items [data-id="${CSS.escape(row.id)}"]`)?.scrollIntoView({ block: 'nearest' });
 }
@@ -455,7 +475,7 @@ function renderSuggestions() {
       if (s.onList) {
         const note = document.createElement('span');
         note.className = 'suggestion-note';
-        note.textContent = 'steht schon drauf';
+        note.textContent = t('suggestion.onList');
         option.append(' ', note);
       }
       return option;
@@ -507,9 +527,9 @@ function setClaimed(id, claimed) {
 
 // Says what a tap on the claim button does.
 function claimButtonLabel(row) {
-  if (row.claim === 'mine') return 'Markierung entfernen';
-  if (row.claim === 'other') return `Markierung von ${row.claimant} entfernen`;
-  return 'Besorge ich';
+  if (row.claim === 'mine') return t('item.claim.releaseMine');
+  if (row.claim === 'other') return t('item.claim.releaseOther', { name: row.claimant });
+  return t('item.claim.take');
 }
 
 // Compares with the item as shown now, not when editing started, so that
@@ -618,7 +638,7 @@ async function refreshAuth() {
     const user = currentUser();
     if (user) showUserName(user);
   } catch (error) {
-    if (error?.status === 401) endSession('Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.');
+    if (error?.status === 401) endSession(t('session.expired'));
   }
 }
 
@@ -706,13 +726,13 @@ async function login(email, password) {
     startSession(record);
   } catch (err) {
     if (err?.status === 429) {
-      error.textContent = 'Zu viele Anmeldeversuche. Bitte warte eine Minute.';
+      error.textContent = t('login.error.rateLimited');
     } else if (err?.status === 0) {
-      error.textContent = 'Keine Verbindung zum Server. Bitte versuche es später erneut.';
+      error.textContent = t('login.error.offline');
     } else {
       // Deliberately the same message for an unknown email and a wrong
       // password, so the form does not reveal which accounts exist.
-      error.textContent = 'E-Mail oder Passwort ist falsch.';
+      error.textContent = t('login.error.credentials');
     }
     error.hidden = false;
   }
@@ -813,6 +833,9 @@ if ('serviceWorker' in navigator) {
     .catch((error) => console.error('Service worker registration failed', error));
 }
 
+document.documentElement.lang = LOCALE;
+fillTexts(document);
+for (const template of document.querySelectorAll('template')) fillTexts(template.content);
 $('app-version').textContent = VERSION;
 showAppName();
 loadAppName();

@@ -2,7 +2,7 @@
 // the status bar indicators and the logout question. Pure, so it can be tested
 // without a browser.
 
-const UNKNOWN = 'Unbekannt';
+import { formatDate, formatTime, t } from './i18n.js';
 
 // PocketBase dates look like "2026-10-17 12:00:00.000Z", local ones are ISO
 // strings. Both become milliseconds; an empty date sorts as 0.
@@ -65,7 +65,7 @@ export function buildRows(snapshot, ops, me, held = new Map()) {
   }
 
   const names = new Map((snapshot?.users ?? []).map((u) => [u.id, u.name]));
-  const nameOf = (id) => names.get(id) || UNKNOWN;
+  const nameOf = (id) => names.get(id) || t('user.unknown');
 
   const rows = [...byId.values()].map((item) => {
     const creator = nameOf(item.createdBy);
@@ -73,10 +73,12 @@ export function buildRows(snapshot, ops, me, held = new Map()) {
     const claim = item.claimedBy ? (item.claimedBy === me ? 'mine' : 'other') : null;
     const claimant = claim && nameOf(item.claimedBy);
     let meta =
-      item.updatedBy && item.updatedBy !== item.createdBy ? `von ${creator} · zuletzt ${editor}` : `von ${creator}`;
+      item.updatedBy && item.updatedBy !== item.createdBy
+        ? t('item.meta.edited', { creator, editor })
+        : t('item.meta.added', { creator });
     // While claimed, who gets the item matters more than who added it.
-    if (claim === 'mine') meta = 'Du besorgst das';
-    if (claim === 'other') meta = `${claimant} besorgt das`;
+    if (claim === 'mine') meta = t('item.meta.claimedByMe');
+    if (claim === 'other') meta = t('item.meta.claimedBy', { name: claimant });
     // Once an item is bought, who added or changed it no longer matters.
     if (item.checked) meta = '';
     const checkedAt = toMs(item.checkedAt);
@@ -116,18 +118,17 @@ export function layoutKey(rows, doneOpen) {
   return `${doneOpen}|${rows.map((row) => `${row.id}:${row.section}`).join(',')}`;
 }
 
-const pad = (n) => String(n).padStart(2, '0');
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 
 // "heute, 14:32", "gestern, 18:05", "15.10., 09:10" or, in an earlier year,
 // "30.12.25, 17:45", in local time. Short, so it fits the status bar.
 function formatSyncTime(date, now) {
-  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const time = formatTime(date);
   const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
-  if (daysAgo === 0) return `heute, ${time}`;
-  if (daysAgo === 1) return `gestern, ${time}`;
-  const year = date.getFullYear() === now.getFullYear() ? '' : pad(date.getFullYear() % 100);
-  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${year}, ${time}`;
+  if (daysAgo === 0) return t('time.today', { time });
+  if (daysAgo === 1) return t('time.yesterday', { time });
+  const year = date.getFullYear() !== now.getFullYear();
+  return t('time.date', { date: formatDate(date, { year }), time });
 }
 
 // The status bar shows up to two indicators, each a colored dot with a text. The
@@ -138,28 +139,27 @@ function formatSyncTime(date, now) {
 // changes. Returns false while online with nothing to send: the sync
 // indicator then says "Synchronisiert", which already implies the connection.
 export function connectionIndicator({ connection, pending }) {
-  if (connection === 'online') return pending === 0 ? false : { state: 'ok', text: 'Verbunden' };
-  if (connection === 'offline') return { state: 'error', text: 'Offline' };
-  return { state: 'busy', text: 'Verbinde …' };
+  if (connection === 'online') return pending === 0 ? false : { state: 'ok', text: t('status.connection.online') };
+  if (connection === 'offline') return { state: 'error', text: t('status.connection.offline') };
+  return { state: 'busy', text: t('status.connection.connecting') };
 }
 
 // pending: number of unsent changes; lastSync: ISO time up to which the list
 // is known to be current, or undefined; now: a Date.
 export function syncIndicator({ connection, pending, lastSync, now }) {
   if (connection === 'online') {
-    if (pending === 0) return { state: 'ok', text: 'Synchronisiert' };
-    return { state: 'busy', text: pending === 1 ? 'Sende 1 Änderung' : `Sende ${pending} Änderungen` };
+    if (pending === 0) return { state: 'ok', text: t('status.sync.done') };
+    return { state: 'busy', text: t('status.sync.sending', { count: pending }) };
   }
   // Not connected: say how old the list on screen is.
   const state = pending === 0 ? 'idle' : 'pending';
-  if (!lastSync) return { state, text: 'Noch nicht synchronisiert' };
-  return { state, text: `Stand ${formatSyncTime(new Date(lastSync), now)}` };
+  if (!lastSync) return { state, text: t('status.sync.never') };
+  return { state, text: t('status.sync.since', { when: formatSyncTime(new Date(lastSync), now) }) };
 }
 
 // The question of the logout dialog. Logging out deletes unsent changes, so
 // the dialog says how many there are.
 export function logoutQuestion(pending) {
-  if (pending === 0) return 'Wirklich abmelden?';
-  if (pending === 1) return '1 Änderung ist noch nicht übertragen und geht beim Abmelden verloren. Trotzdem abmelden?';
-  return `${pending} Änderungen sind noch nicht übertragen und gehen beim Abmelden verloren. Trotzdem abmelden?`;
+  if (pending === 0) return t('logout.question');
+  return t('logout.questionPending', { count: pending });
 }
