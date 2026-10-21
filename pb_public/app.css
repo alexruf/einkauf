@@ -146,6 +146,17 @@ input[type="password"] {
   background: var(--surface);
 }
 
+/* Fields and buttons are surface-colored. Inside a container that has a
+   surface or raised background of its own, they take the page color, so
+   they keep their edge and look set into the container. Primary and delete
+   buttons have their own fill and are left alone. */
+.login input,
+.confirm button:not(.primary),
+.edit-form input,
+.edit-cancel {
+  background: var(--bg);
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

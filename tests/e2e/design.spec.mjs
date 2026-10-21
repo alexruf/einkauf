@@ -48,6 +48,8 @@ function contrastIn(page, selector, background) {
   );
 }
 
+const background = (locator) => locator.evaluate((el) => getComputedStyle(el).backgroundColor);
+
 for (const colorScheme of ['light', 'dark']) {
   test.describe(`in ${colorScheme} mode`, () => {
     test.use({ colorScheme });
@@ -72,6 +74,54 @@ for (const colorScheme of ['light', 'dark']) {
           const ratio = await contrastIn(page, selector, background);
           expect(ratio, `${selector} on ${background}`).toBeGreaterThanOrEqual(4.5);
         }
+      }
+    });
+
+    test('given the edit mode, then the row stands out from the page and its fields and buttons from the row', async ({
+      page,
+    }) => {
+      await createItem(anna, 'Milch');
+      await openAs(page, anna);
+      await row(page, 'Milch').getByRole('button', { name: 'Mehr' }).click();
+      const editRow = page.locator('.item.is-editing');
+      await expect(editRow.getByLabel('Eintrag')).toBeFocused();
+
+      // The header is drawn in the page color, so the add field must differ from it.
+      const pageColor = await background(page.locator('body'));
+      expect(await background(page.locator('.add input')), 'add field on the page').not.toBe(pageColor);
+
+      const rowColor = await background(editRow);
+      expect(rowColor, 'edit row on the page').not.toBe(pageColor);
+      expect(await background(editRow.getByLabel('Menge oder Hinweis')), 'note field').not.toBe(rowColor);
+      for (const name of ['Löschen', 'Abbrechen', 'Speichern']) {
+        expect(await background(editRow.getByRole('button', { name })), `${name} button`).not.toBe(rowColor);
+      }
+      await editRow.getByLabel('Eintrag').blur();
+      expect(await background(editRow.getByLabel('Eintrag')), 'unfocused text field').not.toBe(rowColor);
+    });
+
+    test('given the login screen, then its fields stand out from the login card', async ({ page }) => {
+      await page.goto('/');
+      const card = page.locator('#login-form');
+      await expect(card).toBeVisible();
+
+      const cardColor = await background(card);
+      for (const label of ['E-Mail', 'Passwort']) {
+        expect(await background(card.getByLabel(label)), `${label} field`).not.toBe(cardColor);
+      }
+    });
+
+    test('given the logout dialog, then its buttons stand out from the dialog', async ({ page }) => {
+      await openAs(page, anna);
+      // Opened directly: the app only asks when changes are still waiting to be sent,
+      // and only the dialog's look is under test here.
+      const dialog = page.locator('#confirm-logout');
+      await dialog.evaluate((el) => el.showModal());
+      await expect(dialog).toBeVisible();
+
+      const dialogColor = await background(dialog);
+      for (const name of ['Abbrechen', 'Abmelden']) {
+        expect(await background(dialog.getByRole('button', { name })), `${name} button`).not.toBe(dialogColor);
       }
     });
   });

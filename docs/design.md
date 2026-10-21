@@ -16,8 +16,8 @@ why the icons never need to be redrawn when colors change.
 
 | Token | Role |
 |---|---|
-| `--bg` | the page behind the list |
-| `--surface` | fields, buttons, the row in edit mode |
+| `--bg` | the page behind the list, and fields and buttons inside a container (see below) |
+| `--surface` | fields, buttons, the login card, the row in edit mode |
 | `--raised` | layers above the page: the account menu, dialogs and suggestions |
 | `--text` | item text and titles |
 | `--muted` | meta lines, notes after the item text, checked-off items, secondary labels |
@@ -38,6 +38,15 @@ is used only for decoration.
 All text reaches WCAG AA contrast against the page and against surfaces in
 both modes, which is at least 4.5:1 for normal text. A test checks the
 secondary texts, because they are the ones that drift below the limit.
+
+A field or a framed button always needs a color that differs from the area
+it sits on, otherwise it loses its edge and only the focus ring shows where
+to type. Fields and buttons are drawn in the surface color, which works on
+the page. The login card and the row in edit mode are surface-colored
+themselves, and dialogs are raised, which in light mode is the same white.
+Inside these containers, fields and buttons therefore take the page color
+and look set into the container. Primary buttons and the delete button in
+the edit row keep their own fill.
 
 ## Type
 
