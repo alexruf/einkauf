@@ -3,6 +3,16 @@
 Notable changes per release, for the people who run and develop this app.
 Versions are release dates with a counter for releases on the same day.
 
+## 2026.10.21.0 (2026-10-21)
+
+### Bug Fixes
+
+- **offline-sync:** Keep a change whose answer was cut off by a reload
+- **web-app:** Let fields and buttons stand out from the container they sit in
+
+### Refactoring
+
+- **web-app:** Move all UI text into a message catalog
 ## 2026.10.20.1 (2026-10-20)
 
 ### Features
